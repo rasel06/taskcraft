@@ -26,10 +26,12 @@ model User {
 
   role               WorkspaceRole?   @relation(fields: [roleId], references: [id], onDelete: SetNull)
   projectsLed        Project[]        @relation("ProjectLead")
+  teamsLed           Team[]           @relation("TeamLead")
   projectMemberships ProjectMember[]
   teamMemberships    TeamMember[]
   assignedIssues     Issue[]          @relation("IssueAssignee")
   createdIssues      Issue[]          @relation("IssueCreator")
+  issueActivity      IssueActivity[]
   sessions           Session[]
 }
 
@@ -62,6 +64,8 @@ model Team {
   color        String        @default("indigo")
   issueCounter Int           @default(0)
   cycleCounter Int           @default(0)
+  leadId       String?
+  lead         User?         @relation("TeamLead", fields: [leadId], references: [id], onDelete: SetNull)
   parentTeamId String?
   parentTeam   Team?         @relation("TeamHierarchy", fields: [parentTeamId], references: [id])
   subTeams     Team[]        @relation("TeamHierarchy")
@@ -165,4 +169,20 @@ model Issue {
   project      Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   milestone    Milestone? @relation(fields: [milestoneId], references: [id])
   cycle        Cycle?     @relation(fields: [cycleId], references: [id], onDelete: SetNull)
+  activity     IssueActivity[]
+}
+
+// One row per field change on an Issue - the audit trail behind the
+// Activity panel in the issue detail view (who changed what, and when).
+model IssueActivity {
+  id        String   @id @default(cuid())
+  issueId   String
+  field     String
+  fromValue String?
+  toValue   String?
+  userId    String?
+  createdAt DateTime @default(now())
+
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }

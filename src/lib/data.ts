@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import { can } from "@/lib/permissions";
 import type { TeamWithProjects, UserLite, ProjectOverview, CycleOverview, CycleStatus } from "@/lib/types";
 import type { IssueView } from "@/lib/issue-view";
+
+type AuthUser = { id: string; role?: { permissions: string } | null } | null;
 
 const issueInclude = {
   assignee: { select: { id: true, name: true, avatarUrl: true } },
@@ -46,10 +49,10 @@ function cycleStatus(startDate: Date, targetDate: Date): CycleStatus {
   return "Active";
 }
 
-async function visibleTeamIds(user: { id: string; isWorkspaceAdmin: boolean } | null) {
+async function visibleTeamIds(user: AuthUser) {
   const teams = await prisma.team.findMany({ include: { members: { select: { userId: true } } } });
   return teams
-    .filter((t) => !t.isPrivate || user?.isWorkspaceAdmin || t.members.some((m) => m.userId === user?.id))
+    .filter((t) => !t.isPrivate || can(user, "view_all_teams") || t.members.some((m) => m.userId === user?.id))
     .map((t) => t.id);
 }
 
@@ -80,7 +83,7 @@ export async function getTeamIssues(teamId: string): Promise<IssueView[]> {
   return issues.map(toIssueView);
 }
 
-export async function getVisibleProjects(user: { id: string; isWorkspaceAdmin: boolean } | null, teamId?: string) {
+export async function getVisibleProjects(user: AuthUser, teamId?: string) {
   const teamIds = teamId ? [teamId] : await visibleTeamIds(user);
   const projects = await prisma.project.findMany({
     where: { teamId: { in: teamIds }, isDraft: false },
@@ -95,7 +98,7 @@ export async function getVisibleProjects(user: { id: string; isWorkspaceAdmin: b
 }
 
 export async function getProjectsOverview(
-  user: { id: string; isWorkspaceAdmin: boolean } | null,
+  user: AuthUser,
   teamId?: string,
 ): Promise<ProjectOverview[]> {
   const projects = await getVisibleProjects(user, teamId);
@@ -115,7 +118,7 @@ export async function getProjectsOverview(
   }));
 }
 
-export async function getAllVisibleIssues(user: { id: string; isWorkspaceAdmin: boolean } | null): Promise<IssueView[]> {
+export async function getAllVisibleIssues(user: AuthUser): Promise<IssueView[]> {
   const teamIds = await visibleTeamIds(user);
   const issues = await prisma.issue.findMany({
     where: { project: { teamId: { in: teamIds } } },
@@ -125,19 +128,20 @@ export async function getAllVisibleIssues(user: { id: string; isWorkspaceAdmin: 
   return issues.map(toIssueView);
 }
 
-export async function getVisibleTeams(user: { id: string; isWorkspaceAdmin: boolean } | null): Promise<TeamWithProjects[]> {
+export async function getVisibleTeams(user: AuthUser): Promise<TeamWithProjects[]> {
   const teams = await prisma.team.findMany({
     orderBy: { createdAt: "asc" },
     include: {
       projects: { orderBy: { createdAt: "desc" }, select: { id: true, name: true, teamId: true, status: true, isDraft: true } },
       members: { select: { userId: true } },
+      lead: { select: { id: true, name: true, avatarUrl: true } },
     },
   });
 
   return teams
     .filter((team) => {
       if (!user) return !team.isPrivate;
-      if (user.isWorkspaceAdmin) return true;
+      if (can(user, "view_all_teams")) return true;
       if (!team.isPrivate) return true;
       return team.members.some((m) => m.userId === user.id);
     })
@@ -151,6 +155,7 @@ export async function getVisibleTeams(user: { id: string; isWorkspaceAdmin: bool
       timezone: team.timezone,
       projects: team.projects,
       memberIds: team.members.map((m) => m.userId),
+      lead: team.lead,
     }));
 }
 
@@ -185,6 +190,13 @@ export async function getCycleIssues(cycleId: string): Promise<IssueView[]> {
 export async function getAllUsers(): Promise<UserLite[]> {
   return prisma.user.findMany({
     orderBy: { name: "asc" },
-    select: { id: true, name: true, email: true, avatarUrl: true, isWorkspaceAdmin: true },
+    select: { id: true, name: true, email: true, avatarUrl: true, role: { select: { id: true, name: true } } },
+  });
+}
+
+export async function getWorkspaceRoles() {
+  return prisma.workspaceRole.findMany({
+    orderBy: { createdAt: "asc" },
+    include: { _count: { select: { users: true } } },
   });
 }

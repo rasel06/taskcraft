@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, canAccessTeam } from "@/lib/auth";
+import { getCurrentUser, canAccessTeam, canManageTeam } from "@/lib/auth";
 import { getAllUsers } from "@/lib/data";
 import { AccessDenied } from "@/components/shared/access-denied";
 import { TeamSettingsForm } from "@/components/team/team-settings-form";
@@ -14,7 +14,7 @@ export default async function TeamSettingsPage({ params }: { params: Promise<{ t
     include: {
       members: {
         include: {
-          user: { select: { id: true, name: true, email: true, avatarUrl: true, isWorkspaceAdmin: true } },
+          user: { select: { id: true, name: true, email: true, avatarUrl: true, role: { select: { id: true, name: true } } } },
         },
       },
     },
@@ -23,6 +23,7 @@ export default async function TeamSettingsPage({ params }: { params: Promise<{ t
 
   const user = await getCurrentUser();
   const allowed = await canAccessTeam(teamId, user);
+  const canManage = await canManageTeam(teamId, user);
 
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
@@ -37,7 +38,11 @@ export default async function TeamSettingsPage({ params }: { params: Promise<{ t
         <div className="flex flex-col gap-8 p-6">
           <section className="flex flex-col gap-3">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">General</h2>
-            <TeamSettingsForm team={team} />
+            <TeamSettingsForm
+              team={team}
+              members={team.members.map((m) => m.user)}
+              canManage={canManage}
+            />
           </section>
           <section className="flex flex-col gap-3">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Members</h2>
@@ -45,6 +50,7 @@ export default async function TeamSettingsPage({ params }: { params: Promise<{ t
               teamId={team.id}
               members={team.members.map((m) => ({ userId: m.userId, role: m.role, user: m.user }))}
               allUsers={await getAllUsers()}
+              canManage={canManage}
             />
           </section>
         </div>

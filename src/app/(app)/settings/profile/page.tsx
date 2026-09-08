@@ -10,7 +10,7 @@ export default async function ProfileSettingsPage() {
     name: user.name,
     email: user.email,
     avatarUrl: user.avatarUrl,
-    isWorkspaceAdmin: user.isWorkspaceAdmin,
+    role: user.role ? { id: user.role.id, name: user.role.name } : null,
   };
 
   return (

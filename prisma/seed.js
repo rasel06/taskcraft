@@ -14,11 +14,22 @@ async function main() {
 
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
 
+  const adminRole = await prisma.workspaceRole.create({
+    data: {
+      name: "Admin",
+      isSystem: true,
+      permissions: "manage_members,manage_roles,manage_teams,delete_issues,view_all_teams",
+    },
+  });
+  const memberRole = await prisma.workspaceRole.create({
+    data: { name: "Member", isSystem: true, permissions: "" },
+  });
+
   const [alice, bob, carol, dave] = await Promise.all([
-    prisma.user.create({ data: { name: "Alice Rahman", email: "alice@taskcraft.dev", bankId: "BNK-1001", fileNumber: "FN-1001", mobile: "+8801700000001", passwordHash, isWorkspaceAdmin: true } }),
-    prisma.user.create({ data: { name: "Bob Islam", email: "bob@taskcraft.dev", bankId: "BNK-1002", fileNumber: "FN-1002", mobile: "+8801700000002", passwordHash } }),
-    prisma.user.create({ data: { name: "Carol Ahmed", email: "carol@taskcraft.dev", bankId: "BNK-1003", fileNumber: "FN-1003", mobile: "+8801700000003", passwordHash } }),
-    prisma.user.create({ data: { name: "Dave Khan", email: "dave@taskcraft.dev", bankId: "BNK-1004", fileNumber: "FN-1004", mobile: "+8801700000004", passwordHash } }),
+    prisma.user.create({ data: { name: "Alice Rahman", email: "alice@taskcraft.dev", bankId: "BNK-1001", fileNumber: "FN-1001", mobile: "+8801700000001", passwordHash, roleId: adminRole.id } }),
+    prisma.user.create({ data: { name: "Bob Islam", email: "bob@taskcraft.dev", bankId: "BNK-1002", fileNumber: "FN-1002", mobile: "+8801700000002", passwordHash, roleId: memberRole.id } }),
+    prisma.user.create({ data: { name: "Carol Ahmed", email: "carol@taskcraft.dev", bankId: "BNK-1003", fileNumber: "FN-1003", mobile: "+8801700000003", passwordHash, roleId: memberRole.id } }),
+    prisma.user.create({ data: { name: "Dave Khan", email: "dave@taskcraft.dev", bankId: "BNK-1004", fileNumber: "FN-1004", mobile: "+8801700000004", passwordHash, roleId: memberRole.id } }),
   ]);
 
   const frontend = await prisma.team.create({
@@ -28,6 +39,7 @@ async function main() {
       timezone: "GMT+6:00 - Bangladesh Standard Time",
       isPrivate: false,
       icon: "Layers",
+      leadId: alice.id,
       members: {
         create: [
           { userId: alice.id, role: "ADMIN" },
@@ -45,6 +57,7 @@ async function main() {
       timezone: "GMT+6:00 - Bangladesh Standard Time",
       isPrivate: true,
       icon: "Cpu",
+      leadId: alice.id,
       members: {
         create: [
           { userId: alice.id, role: "ADMIN" },

@@ -3,7 +3,7 @@ export interface UserLite {
   name: string;
   email: string;
   avatarUrl: string | null;
-  isWorkspaceAdmin: boolean;
+  role: { id: string; name: string } | null;
 }
 
 export interface MemberDetail extends UserLite {
@@ -59,4 +59,5 @@ export interface TeamWithProjects {
   timezone: string;
   projects: ProjectLite[];
   memberIds: string[];
+  lead: { id: string; name: string; avatarUrl: string | null } | null;
 }

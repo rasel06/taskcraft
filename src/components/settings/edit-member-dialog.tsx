@@ -15,11 +15,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { updateMember } from "@/actions/members";
 import type { MemberDetail } from "@/lib/types";
 
-export function EditMemberDialog({ member }: { member: MemberDetail }) {
+export function EditMemberDialog({
+  member,
+  roles,
+}: {
+  member: MemberDetail;
+  roles: { id: string; name: string }[];
+}) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [name, setName] = React.useState(member.name);
@@ -27,14 +33,14 @@ export function EditMemberDialog({ member }: { member: MemberDetail }) {
   const [bankId, setBankId] = React.useState(member.bankId ?? "");
   const [fileNumber, setFileNumber] = React.useState(member.fileNumber ?? "");
   const [mobile, setMobile] = React.useState(member.mobile ?? "");
-  const [isAdmin, setIsAdmin] = React.useState(member.isWorkspaceAdmin);
+  const [roleId, setRoleId] = React.useState(member.role?.id ?? "");
   const [pending, setPending] = React.useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setPending(true);
     try {
-      await updateMember(member.id, { name, email, bankId, fileNumber, mobile, isWorkspaceAdmin: isAdmin });
+      await updateMember(member.id, { name, email, bankId, fileNumber, mobile, roleId: roleId || null });
       toast.success("Member updated");
       setOpen(false);
       router.refresh();
@@ -78,12 +84,20 @@ export function EditMemberDialog({ member }: { member: MemberDetail }) {
               <Label>Mobile</Label>
               <Input type="tel" value={mobile} onChange={(e) => setMobile(e.target.value)} required />
             </div>
-            <div className="flex items-center justify-between rounded-md border border-border px-3 py-2.5">
-              <div>
-                <div className="text-sm text-foreground">Workspace admin</div>
-                <div className="text-xs text-muted-foreground">Can access every team and project</div>
-              </div>
-              <Switch checked={isAdmin} onCheckedChange={setIsAdmin} />
+            <div className="space-y-1.5">
+              <Label>Role</Label>
+              <Select value={roleId} onValueChange={setRoleId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="No role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter className="justify-end">

@@ -18,10 +18,12 @@ export function TeamMembersManager({
   teamId,
   members,
   allUsers,
+  canManage,
 }: {
   teamId: string;
   members: Member[];
   allUsers: UserLite[];
+  canManage: boolean;
 }) {
   const memberIds = new Set(members.map((m) => m.userId));
   const addable = allUsers.filter((u) => !memberIds.has(u.id));
@@ -46,7 +48,7 @@ export function TeamMembersManager({
 
   return (
     <div className="flex max-w-md flex-col gap-3">
-      {addable.length > 0 && (
+      {canManage && addable.length > 0 && (
         <Select value="" onValueChange={add}>
           <SelectTrigger>
             <SelectValue placeholder="Add a member" />
@@ -74,9 +76,11 @@ export function TeamMembersManager({
               <div className="truncate text-xs text-muted-foreground">{m.user.email}</div>
             </div>
             {m.role === "ADMIN" && <ShieldCheck className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />}
-            <button onClick={() => remove(m.userId)} className="text-faint-foreground hover:text-red-400">
-              <X className="h-3.5 w-3.5" />
-            </button>
+            {canManage && (
+              <button onClick={() => remove(m.userId)} className="text-faint-foreground hover:text-red-400">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </li>
         ))}
       </ul>

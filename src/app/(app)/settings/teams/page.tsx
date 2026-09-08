@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Lock, Globe2 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
-import { getVisibleTeams } from "@/lib/data";
+import { getVisibleTeams, getAllUsers } from "@/lib/data";
 import { CreateTeamDialog } from "@/components/team/create-team-dialog";
 import { TeamIconBadge } from "@/components/shared/team-icon";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Plus } from "lucide-react";
 export default async function TeamsSettingsPage() {
   const user = await getCurrentUser();
   const teams = await getVisibleTeams(user);
+  const users = await getAllUsers();
 
   return (
     <div className="flex flex-col gap-4">
@@ -17,6 +18,8 @@ export default async function TeamsSettingsPage() {
         <h1 className="text-sm font-semibold text-foreground">Teams</h1>
         <CreateTeamDialog
           teams={teams}
+          users={users}
+          currentUserId={user!.id}
           trigger={
             <Button variant="primary" size="sm">
               <Plus className="h-3.5 w-3.5" /> Create team
@@ -33,6 +36,7 @@ export default async function TeamsSettingsPage() {
             >
               <TeamIconBadge icon={t.icon} color={t.color} className="h-6 w-6" iconClassName="h-3.5 w-3.5" />
               <span className="flex-1 text-sm text-foreground">{t.name}</span>
+              {t.lead && <span className="text-xs text-muted-foreground">Lead: {t.lead.name}</span>}
               <span className="text-xs text-muted-foreground">{t.projects.length} projects</span>
               {t.isPrivate ? (
                 <Lock className="h-3.5 w-3.5 text-faint-foreground" />

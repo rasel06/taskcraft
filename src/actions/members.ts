@@ -2,19 +2,26 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, hashPassword, destroyAllSessionsForUser } from "@/lib/auth";
+import { requirePermission, hashPassword, destroyAllSessionsForUser } from "@/lib/auth";
+import { parsePermissions } from "@/lib/permissions";
 
-async function requireAdmin() {
-  const user = await getCurrentUser();
-  if (!user || !user.isWorkspaceAdmin) throw new Error("Only workspace admins can manage members");
-  return user;
+async function requireManageMembers() {
+  return requirePermission("manage_members");
+}
+
+async function hasOtherMemberManager(excludeUserId: string) {
+  const roles = await prisma.workspaceRole.findMany({ select: { id: true, permissions: true } });
+  const managerRoleIds = roles.filter((r) => parsePermissions(r.permissions).includes("manage_members")).map((r) => r.id);
+  if (managerRoleIds.length === 0) return false;
+  const count = await prisma.user.count({ where: { roleId: { in: managerRoleIds }, id: { not: excludeUserId } } });
+  return count > 0;
 }
 
 export async function listMembers() {
-  await requireAdmin();
+  await requireManageMembers();
   return prisma.user.findMany({
     orderBy: { createdAt: "asc" },
-    include: { teamMemberships: { include: { team: true } } },
+    include: { teamMemberships: { include: { team: true } }, role: true },
   });
 }
 
@@ -39,9 +46,9 @@ export async function createMember(input: {
   fileNumber: string;
   mobile: string;
   password: string;
-  isWorkspaceAdmin: boolean;
+  roleId: string | null;
 }) {
-  await requireAdmin();
+  await requireManageMembers();
 
   const name = input.name.trim();
   const email = input.email.trim().toLowerCase();
@@ -60,7 +67,7 @@ export async function createMember(input: {
 
   const passwordHash = await hashPassword(input.password);
   const user = await prisma.user.create({
-    data: { name, email, bankId, fileNumber, mobile, passwordHash, isWorkspaceAdmin: input.isWorkspaceAdmin },
+    data: { name, email, bankId, fileNumber, mobile, passwordHash, roleId: input.roleId },
   });
 
   revalidatePath("/settings/members");
@@ -69,9 +76,9 @@ export async function createMember(input: {
 
 export async function updateMember(
   userId: string,
-  input: { name: string; email: string; bankId: string; fileNumber: string; mobile: string; isWorkspaceAdmin: boolean },
+  input: { name: string; email: string; bankId: string; fileNumber: string; mobile: string; roleId: string | null },
 ) {
-  const admin = await requireAdmin();
+  const admin = await requireManageMembers();
 
   const name = input.name.trim();
   const email = input.email.trim().toLowerCase();
@@ -82,9 +89,12 @@ export async function updateMember(
     throw new Error("Name, email, bank ID, file number, and mobile are required");
   }
 
-  if (userId === admin.id && !input.isWorkspaceAdmin) {
-    const otherAdmins = await prisma.user.count({ where: { isWorkspaceAdmin: true, id: { not: userId } } });
-    if (otherAdmins === 0) throw new Error("You are the only workspace admin — promote someone else first");
+  if (userId === admin.id) {
+    const newRole = input.roleId ? await prisma.workspaceRole.findUnique({ where: { id: input.roleId } }) : null;
+    const keepsManageMembers = newRole ? parsePermissions(newRole.permissions).includes("manage_members") : false;
+    if (!keepsManageMembers && !(await hasOtherMemberManager(userId))) {
+      throw new Error("You're the only member who can manage members — assign that role to someone else first");
+    }
   }
 
   await assertUnique("email", email, userId);
@@ -94,7 +104,7 @@ export async function updateMember(
 
   const user = await prisma.user.update({
     where: { id: userId },
-    data: { name, email, bankId, fileNumber, mobile, isWorkspaceAdmin: input.isWorkspaceAdmin },
+    data: { name, email, bankId, fileNumber, mobile, roleId: input.roleId },
   });
 
   revalidatePath("/settings/members");
@@ -103,7 +113,7 @@ export async function updateMember(
 }
 
 export async function resetMemberPassword(userId: string, newPassword: string) {
-  await requireAdmin();
+  await requireManageMembers();
   if (newPassword.length < 8) throw new Error("Password must be at least 8 characters");
 
   const passwordHash = await hashPassword(newPassword);
@@ -113,7 +123,7 @@ export async function resetMemberPassword(userId: string, newPassword: string) {
 }
 
 export async function deleteMember(userId: string) {
-  const admin = await requireAdmin();
+  const admin = await requireManageMembers();
   if (userId === admin.id) throw new Error("You can't delete your own account");
 
   const leadsProjects = await prisma.project.count({ where: { leadId: userId } });

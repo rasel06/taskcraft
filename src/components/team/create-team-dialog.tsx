@@ -22,13 +22,17 @@ import { createTeam } from "@/actions/teams";
 import { TIMEZONES, TEAM_ICONS, TEAM_COLORS } from "@/lib/constants";
 import { TEAM_ICON_MAP } from "@/components/shared/team-icon";
 import { cn } from "@/lib/utils";
-import type { TeamWithProjects } from "@/lib/types";
+import type { TeamWithProjects, UserLite } from "@/lib/types";
 
 export function CreateTeamDialog({
   teams,
+  users,
+  currentUserId,
   trigger,
 }: {
   teams: TeamWithProjects[];
+  users: UserLite[];
+  currentUserId: string;
   trigger: React.ReactNode;
 }) {
   const router = useRouter();
@@ -40,6 +44,7 @@ export function CreateTeamDialog({
   const [isPrivate, setIsPrivate] = React.useState(false);
   const [icon, setIcon] = React.useState<string>(TEAM_ICONS[0]);
   const [color, setColor] = React.useState<string>(TEAM_COLORS[8].key);
+  const [leadId, setLeadId] = React.useState<string>(currentUserId);
   const [cloneFrom, setCloneFrom] = React.useState<string>("none");
   const [createMore, setCreateMore] = React.useState(false);
   const nameRef = React.useRef<HTMLInputElement>(null);
@@ -55,6 +60,7 @@ export function CreateTeamDialog({
     setIsPrivate(false);
     setIcon(TEAM_ICONS[0]);
     setColor(TEAM_COLORS[8].key);
+    setLeadId(currentUserId);
     setCloneFrom("none");
   }
 
@@ -70,6 +76,7 @@ export function CreateTeamDialog({
         isPrivate,
         icon,
         color,
+        leadId,
         cloneFromTeamId: cloneFrom === "none" ? null : cloneFrom,
       });
       toast.success(`Team "${team.name}" created`);
@@ -177,6 +184,23 @@ export function CreateTeamDialog({
             </div>
 
             <div className="space-y-1.5">
+              <Label>Team lead</Label>
+              <Select value={leadId} onValueChange={setLeadId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name}
+                      {u.id === currentUserId ? " (you)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
               <Label>Timezone</Label>
               <Select value={timezone} onValueChange={setTimezone}>
                 <SelectTrigger>
@@ -233,7 +257,6 @@ export function CreateTeamDialog({
 
           <DialogFooter>
             <div className="flex items-center gap-3">
-              <span className="text-xs text-faint-foreground">You&apos;ll be added as the team admin</span>
               <div className="flex items-center gap-2">
                 <Switch checked={createMore} onCheckedChange={setCreateMore} id="create-more" />
                 <Label htmlFor="create-more" className="cursor-pointer">

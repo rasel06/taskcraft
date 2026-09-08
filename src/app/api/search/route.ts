@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
     include: { members: { select: { userId: true } } },
   });
   const visibleTeamIds = teams
-    .filter((t) => !t.isPrivate || user?.isWorkspaceAdmin || t.members.some((m) => m.userId === user?.id))
+    .filter((t) => !t.isPrivate || can(user, "view_all_teams") || t.members.some((m) => m.userId === user?.id))
     .map((t) => t.id);
 
   if (q.length === 0 && !projectFilter && !teamFilter) {

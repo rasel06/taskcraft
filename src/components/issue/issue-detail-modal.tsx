@@ -15,6 +15,15 @@ import { ISSUE_STATUSES, PRIORITIES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import type { UserLite } from "@/lib/types";
 
+export interface IssueActivityEntry {
+  id: string;
+  field: string;
+  fromValue: string | null;
+  toValue: string | null;
+  createdAt: string;
+  user: { id: string; name: string; avatarUrl: string | null } | null;
+}
+
 export interface IssueDetail {
   id: string;
   title: string;
@@ -24,9 +33,46 @@ export interface IssueDetail {
   labels: string;
   createdAt: string;
   assigneeId: string | null;
+  activity?: IssueActivityEntry[];
 }
 
-export function IssueDetailModal({ issue, users }: { issue: IssueDetail; users: UserLite[] }) {
+const FIELD_LABELS: Record<string, string> = {
+  created: "Issue",
+  title: "Title",
+  description: "Description",
+  status: "Status",
+  priority: "Priority",
+  assigneeId: "Assignee",
+  milestoneId: "Milestone",
+  cycleId: "Cycle",
+  labels: "Labels",
+};
+
+function formatActivityValue(field: string, value: string | null, users: UserLite[]): string {
+  if (!value) return field === "assigneeId" ? "Unassigned" : "—";
+  if (field === "assigneeId") return users.find((u) => u.id === value)?.name ?? "Unknown";
+  if (field === "description" || field === "title") return value.length > 40 ? `${value.slice(0, 40)}…` : value;
+  return value;
+}
+
+function formatActivityTime(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export function IssueDetailModal({
+  issue,
+  users,
+  canDelete = true,
+}: {
+  issue: IssueDetail;
+  users: UserLite[];
+  canDelete?: boolean;
+}) {
   const router = useRouter();
   const [open, setOpen] = React.useState(true);
   const [description, setDescription] = React.useState(issue.description ?? "");
@@ -142,10 +188,38 @@ export function IssueDetailModal({ issue, users }: { issue: IssueDetail; users: 
             </Select>
 
             <span className="ml-auto text-xs text-faint-foreground">Created {formatDate(issue.createdAt)}</span>
-            <button onClick={handleDelete} className="text-faint-foreground hover:text-red-400">
-              <Trash2 className="h-4 w-4" />
-            </button>
+            {canDelete && (
+              <button onClick={handleDelete} className="text-faint-foreground hover:text-red-400">
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
           </div>
+
+          {issue.activity && issue.activity.length > 0 && (
+            <div className="border-t border-border pt-3">
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Activity</h3>
+              <ul className="flex flex-col gap-2.5">
+                {issue.activity.map((entry) => (
+                  <li key={entry.id} className="flex items-start gap-2 text-xs">
+                    <UserAvatar user={entry.user ?? undefined} className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span className="text-muted-foreground">
+                      <span className="font-medium text-foreground">{entry.user?.name ?? "Someone"}</span>{" "}
+                      {entry.field === "created" ? (
+                        "created this issue"
+                      ) : (
+                        <>
+                          changed <span className="text-foreground">{FIELD_LABELS[entry.field] ?? entry.field}</span>{" "}
+                          from <span className="text-foreground">{formatActivityValue(entry.field, entry.fromValue, users)}</span>{" "}
+                          to <span className="text-foreground">{formatActivityValue(entry.field, entry.toValue, users)}</span>
+                        </>
+                      )}
+                      <span className="ml-1.5 text-faint-foreground">· {formatActivityTime(entry.createdAt)}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

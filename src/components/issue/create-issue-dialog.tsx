@@ -124,9 +124,28 @@ export function CreateIssueDialog({
           </DialogHeader>
 
           <div className="flex flex-col gap-3 px-5 py-4">
+            <Select
+              value={projectId}
+              onValueChange={(v) => {
+                setProjectId(v);
+                titleRef.current?.focus();
+              }}
+            >
+              <SelectTrigger autoFocus={!defaultProjectId} className="w-auto min-w-40">
+                <SelectValue placeholder="Choose a project..." />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.teamIdentifier} · {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Input
               ref={titleRef}
-              autoFocus
+              autoFocus={!!defaultProjectId}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Issue title"
@@ -181,19 +200,6 @@ export function CreateIssueDialog({
                   {users.map((u) => (
                     <SelectItem key={u.id} value={u.id} icon={<UserAvatar user={u} className="h-4 w-4" />}>
                       {u.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={projectId} onValueChange={setProjectId}>
-                <SelectTrigger className="w-auto min-w-32">
-                  <SelectValue placeholder="Project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.teamIdentifier} · {p.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

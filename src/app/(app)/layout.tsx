@@ -14,7 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     name: currentUser.name,
     email: currentUser.email,
     avatarUrl: currentUser.avatarUrl,
-    isWorkspaceAdmin: currentUser.isWorkspaceAdmin,
+    role: currentUser.role ? { id: currentUser.role.id, name: currentUser.role.name } : null,
   };
 
   return (

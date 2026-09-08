@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, canAccessProject } from "@/lib/auth";
 import { getProjectIssues, getAllUsers } from "@/lib/data";
+import { can } from "@/lib/permissions";
 import { AccessDenied } from "@/components/shared/access-denied";
 import { Board } from "@/components/board/board";
 import { UserAvatar } from "@/components/shared/user-avatar";
@@ -49,7 +50,15 @@ export default async function ProjectPage({
   const [issues, users] = await Promise.all([getProjectIssues(projectId), getAllUsers()]);
   const selectedIssue = issueId ? issues.find((i) => i.id === issueId) : undefined;
   const fullSelectedIssue = selectedIssue
-    ? await prisma.issue.findUnique({ where: { id: selectedIssue.id } })
+    ? await prisma.issue.findUnique({
+        where: { id: selectedIssue.id },
+        include: {
+          activity: {
+            orderBy: { createdAt: "asc" },
+            include: { user: { select: { id: true, name: true, avatarUrl: true } } },
+          },
+        },
+      })
     : null;
 
   return (
@@ -113,8 +122,17 @@ export default async function ProjectPage({
             labels: fullSelectedIssue.labels,
             createdAt: fullSelectedIssue.createdAt.toISOString(),
             assigneeId: fullSelectedIssue.assigneeId,
+            activity: fullSelectedIssue.activity.map((a) => ({
+              id: a.id,
+              field: a.field,
+              fromValue: a.fromValue,
+              toValue: a.toValue,
+              createdAt: a.createdAt.toISOString(),
+              user: a.user,
+            })),
           }}
           users={users}
+          canDelete={can(user, "delete_issues")}
         />
       )}
     </div>

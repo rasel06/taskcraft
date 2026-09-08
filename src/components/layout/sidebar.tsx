@@ -93,6 +93,8 @@ export function Sidebar({
         <span className="text-xs font-medium text-faint-foreground">Teams</span>
         <CreateTeamDialog
           teams={teams}
+          users={users}
+          currentUserId={currentUser?.id ?? ""}
           trigger={
             <button className="text-faint-foreground hover:text-foreground">
               <Plus className="h-3.5 w-3.5" />

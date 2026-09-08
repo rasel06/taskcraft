@@ -36,6 +36,7 @@ const SECTIONS = [
     title: "Workspace",
     links: [
       { href: "/settings/members", label: "Members" },
+      { href: "/settings/roles", label: "Roles" },
       { href: "/settings/teams", label: "Teams" },
       { href: "/settings/billing", label: "Billing" },
       { href: "/settings/integrations", label: "Integrations" },

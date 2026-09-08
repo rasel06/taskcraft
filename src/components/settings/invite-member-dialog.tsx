@@ -16,9 +16,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { createMember } from "@/actions/members";
 
-export function InviteMemberDialog() {
+export function InviteMemberDialog({ roles }: { roles: { id: string; name: string }[] }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [name, setName] = React.useState("");
@@ -27,7 +28,7 @@ export function InviteMemberDialog() {
   const [fileNumber, setFileNumber] = React.useState("");
   const [mobile, setMobile] = React.useState("");
   const [password, setPassword] = React.useState("");
-  const [isAdmin, setIsAdmin] = React.useState(false);
+  const [roleId, setRoleId] = React.useState<string>(roles.find((r) => r.name === "Member")?.id ?? roles[0]?.id ?? "");
   const [pending, setPending] = React.useState(false);
   const [createMore, setCreateMore] = React.useState(false);
   const nameRef = React.useRef<HTMLInputElement>(null);
@@ -45,7 +46,7 @@ export function InviteMemberDialog() {
     e.preventDefault();
     setPending(true);
     try {
-      await createMember({ name, email, bankId, fileNumber, mobile, password, isWorkspaceAdmin: isAdmin });
+      await createMember({ name, email, bankId, fileNumber, mobile, password, roleId: roleId || null });
       toast.success(`${name} added to the workspace`);
       router.refresh();
       if (createMore) {
@@ -54,7 +55,6 @@ export function InviteMemberDialog() {
       } else {
         setOpen(false);
         resetFields();
-        setIsAdmin(false);
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to invite member");
@@ -107,12 +107,20 @@ export function InviteMemberDialog() {
               />
               <p className="text-xs text-faint-foreground">At least 8 characters. They can change it after signing in.</p>
             </div>
-            <div className="flex items-center justify-between rounded-md border border-border px-3 py-2.5">
-              <div>
-                <div className="text-sm text-foreground">Workspace admin</div>
-                <div className="text-xs text-muted-foreground">Can access every team and project</div>
-              </div>
-              <Switch checked={isAdmin} onCheckedChange={setIsAdmin} />
+            <div className="space-y-1.5">
+              <Label>Role</Label>
+              <Select value={roleId} onValueChange={setRoleId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="No role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

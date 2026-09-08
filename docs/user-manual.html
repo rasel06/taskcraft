@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskCraft User Manual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #fbfbfd;
+    --surface: #f2f3f8;
+    --surface-2: #e9eaf3;
+    --border: #e0e2ec;
+    --text: #1c1d2b;
+    --text-muted: #5c5e74;
+    --text-faint: #8688a0;
+    --accent: #4a3fd6;
+    --accent-ink: #ffffff;
+    --accent-soft: #edecfd;
+    --accent-soft-border: #d6d3f8;
+    --good: #12805c;
+    --good-soft: #e6f5ee;
+    --warn: #9a5b12;
+    --warn-soft: #fbf0dd;
+    --bad: #b1362f;
+    --bad-soft: #fbeae9;
+    --local: #4d5270;
+    --local-soft: #eeeef4;
+    --code-bg: #22233a;
+    --code-text: #e7e7f3;
+    --shadow: 0 1px 2px rgba(30,25,80,0.06), 0 8px 24px -12px rgba(30,25,80,0.12);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #131320;
+      --surface: #1b1c2c;
+      --surface-2: #23243a;
+      --border: #34354e;
+      --text: #ecebf6;
+      --text-muted: #aeaec6;
+      --text-faint: #7d7e98;
+      --accent: #9089ff;
+      --accent-ink: #16162a;
+      --accent-soft: #23213f;
+      --accent-soft-border: #38356a;
+      --good: #5fd6a8;
+      --good-soft: #16302a;
+      --warn: #e8b464;
+      --warn-soft: #362a15;
+      --bad: #ef8b85;
+      --bad-soft: #3a1e1d;
+      --local: #b7b9d8;
+      --local-soft: #23243a;
+      --code-bg: #0e0e1c;
+      --code-text: #dcdcf0;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #131320;
+    --surface: #1b1c2c;
+    --surface-2: #23243a;
+    --border: #34354e;
+    --text: #ecebf6;
+    --text-muted: #aeaec6;
+    --text-faint: #7d7e98;
+    --accent: #9089ff;
+    --accent-ink: #16162a;
+    --accent-soft: #23213f;
+    --accent-soft-border: #38356a;
+    --good: #5fd6a8;
+    --good-soft: #16302a;
+    --warn: #e8b464;
+    --warn-soft: #362a15;
+    --bad: #ef8b85;
+    --bad-soft: #3a1e1d;
+    --local: #b7b9d8;
+    --local-soft: #23243a;
+    --code-bg: #0e0e1c;
+    --code-text: #dcdcf0;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Public Sans", -apple-system, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 { font-family: "Manrope", "Public Sans", sans-serif; text-wrap: balance; line-height: 1.25; color: var(--text); }
+  code, kbd, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+  a { color: var(--accent); }
+  p { max-width: 66ch; }
+  img { max-width: 100%; }
+
+  /* ---------- Top header ---------- */
+  .masthead {
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--surface), var(--bg));
+    padding: 2.75rem 1.5rem 2.25rem;
+  }
+  .masthead-inner { max-width: 1180px; margin: 0 auto; }
+  .brand-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.1rem; }
+  .brand-mark {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--accent); color: var(--accent-ink);
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Manrope", sans-serif; font-weight: 800; font-size: 1rem;
+    flex: none;
+  }
+  .brand-name { font-family: "Manrope", sans-serif; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.01em; color: var(--text-muted); }
+  .masthead h1 { font-size: clamp(2rem, 4.2vw, 2.9rem); font-weight: 800; margin: 0 0 0.6rem; letter-spacing: -0.01em; }
+  .masthead .lede { font-size: 1.1rem; color: var(--text-muted); max-width: 56ch; margin: 0 0 1.25rem; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; font-size: 0.8rem; color: var(--text-faint); font-family: "IBM Plex Mono", monospace; }
+  .meta-row span b { color: var(--text-muted); font-weight: 500; }
+
+  /* ---------- Layout ---------- */
+  .layout { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 3rem; padding: 2.5rem 1.5rem 5rem; align-items: start; }
+
+  nav.toc { position: sticky; top: 1.5rem; align-self: start; max-height: calc(100vh - 3rem); overflow-y: auto; padding-right: 0.5rem; }
+  nav.toc .toc-group { margin-bottom: 1.4rem; }
+  nav.toc .toc-heading { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--text-faint); margin: 0 0 0.5rem; }
+  nav.toc ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+  nav.toc a {
+    display: block; text-decoration: none; color: var(--text-muted);
+    font-size: 0.875rem; padding: 0.3rem 0.6rem; border-radius: 6px;
+    border-left: 2px solid transparent; transition: background 0.12s, color 0.12s;
+  }
+  nav.toc a:hover { background: var(--surface); color: var(--text); }
+  nav.toc a.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+
+  main { min-width: 0; }
+  section { margin-bottom: 3.5rem; scroll-margin-top: 1.5rem; }
+  section > .eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--accent); margin: 0 0 0.4rem; }
+  section h2 { font-size: 1.65rem; font-weight: 800; margin: 0 0 0.9rem; padding-bottom: 0.7rem; border-bottom: 1px solid var(--border); }
+  section h3 { font-size: 1.18rem; font-weight: 700; margin: 2rem 0 0.7rem; }
+  section h4 { font-size: 0.98rem; font-weight: 700; margin: 1.4rem 0 0.5rem; color: var(--text-muted); }
+  section p { color: var(--text); }
+  section > p:first-of-type { font-size: 1.04rem; color: var(--text-muted); }
+
+  /* ---------- Steps ---------- */
+  ol.steps { list-style: none; margin: 1rem 0; padding: 0; counter-reset: step; display: flex; flex-direction: column; gap: 0.9rem; }
+  ol.steps li { counter-increment: step; display: grid; grid-template-columns: 2rem 1fr; gap: 0.9rem; align-items: start; }
+  ol.steps li::before {
+    content: counter(step);
+    font-family: "Manrope", sans-serif; font-weight: 800; font-size: 0.85rem;
+    width: 2rem; height: 2rem; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-soft-border);
+    display: flex; align-items: center; justify-content: center; flex: none;
+  }
+  ol.steps li .step-body p { margin: 0.15rem 0 0; color: var(--text-muted); }
+  ol.steps li .step-body strong { color: var(--text); }
+
+  ul.plain { padding-left: 1.2rem; margin: 0.8rem 0; }
+  ul.plain li { margin-bottom: 0.4rem; }
+
+  /* ---------- Callouts ---------- */
+  .callout { border: 1px solid var(--border); border-left-width: 3px; border-radius: 8px; padding: 0.9rem 1.1rem; margin: 1.2rem 0; background: var(--surface); }
+  .callout p { margin: 0.2rem 0 0; max-width: 62ch; }
+  .callout p:first-child { margin-top: 0; }
+  .callout-label { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+  .callout-tip { border-left-color: var(--good); }
+  .callout-tip .callout-label { color: var(--good); }
+  .callout-note { border-left-color: var(--accent); }
+  .callout-note .callout-label { color: var(--accent); }
+  .callout-warning { border-left-color: var(--warn); }
+  .callout-warning .callout-label { color: var(--warn); }
+  .callout-danger { border-left-color: var(--bad); }
+  .callout-danger .callout-label { color: var(--bad); }
+  .callout-local { border-left-color: var(--local); background: var(--local-soft); }
+  .callout-local .callout-label { color: var(--local); }
+
+  /* ---------- Field tables ---------- */
+  .table-wrap { overflow-x: auto; margin: 1rem 0 1.6rem; border: 1px solid var(--border); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; min-width: 480px; }
+  table caption { text-align: left; padding: 0.7rem 1rem; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-faint); border-bottom: 1px solid var(--border); }
+  th, td { text-align: left; padding: 0.65rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--surface); font-family: "Manrope", sans-serif; font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+  tr:last-child td { border-bottom: none; }
+  td .fname { font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; color: var(--text); font-weight: 500; }
+  td .ex { color: var(--text-faint); font-style: italic; }
+  tbody tr:hover { background: var(--surface); }
+  td.center, th.center { text-align: center; }
+
+  /* ---------- Pills / badges ---------- */
+  kbd { background: var(--surface-2); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; padding: 0.05rem 0.42rem; font-size: 0.82rem; }
+  .pill { display: inline-flex; align-items: center; gap: 0.35rem; border-radius: 999px; padding: 0.22rem 0.7rem; font-size: 0.8rem; font-weight: 600; border: 1px solid var(--border); background: var(--surface); }
+  .pill-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+
+  .flow { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; margin: 1.2rem 0; }
+  .flow .pill { background: var(--surface); }
+  .flow .connector { color: var(--text-faint); font-size: 1.1rem; }
+  .flow .split { color: var(--text-faint); font-size: 0.8rem; padding: 0 0.15rem; }
+
+  /* ---------- Priority scale ---------- */
+  .priority-scale { display: flex; flex-wrap: wrap; gap: 1.6rem; margin: 1.2rem 0 1.6rem; }
+  .priority-item { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+  .priority-bars { display: flex; align-items: flex-end; gap: 2px; height: 20px; }
+  .priority-bars i { display: block; width: 4px; border-radius: 1px; background: var(--border); }
+  .priority-bars i.on { background: var(--accent); }
+  .priority-item span { font-size: 0.75rem; color: var(--text-muted); font-family: "IBM Plex Mono", monospace; }
+
+  /* ---------- Cards / grid ---------- */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.9rem; margin: 1.2rem 0; }
+  .mini-card { border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.1rem; background: var(--surface); }
+  .mini-card h4 { margin: 0 0 0.35rem; color: var(--text); font-size: 0.95rem; }
+  .mini-card p { margin: 0; font-size: 0.85rem; color: var(--text-muted); max-width: none; }
+
+  .compare-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin: 1.2rem 0; }
+  .compare-cell { background: var(--surface); padding: 1rem 1.15rem; }
+  .compare-cell h4 { margin: 0 0 0.4rem; font-size: 0.9rem; }
+  .compare-cell p { margin: 0; font-size: 0.83rem; color: var(--text-muted); max-width: none; }
+
+  /* ---------- Quick start box ---------- */
+  .quickstart { border: 1px solid var(--accent-soft-border); background: var(--accent-soft); border-radius: 14px; padding: 1.6rem 1.8rem; margin: 1.4rem 0 2rem; }
+  .quickstart .eyebrow { color: var(--accent); }
+  .quickstart h3 { margin-top: 0; }
+
+  code.inline { background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; padding: 0.05rem 0.4rem; font-size: 0.85rem; }
+
+  /* ---------- Footer ---------- */
+  footer { border-top: 1px solid var(--border); padding: 2.5rem 1.5rem; text-align: center; color: var(--text-faint); font-size: 0.85rem; }
+  footer a { color: var(--text-muted); }
+
+  ::selection { background: var(--accent-soft-border); }
+
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; padding-top: 1.5rem; }
+    nav.toc {
+      position: sticky; top: 0; z-index: 5; max-height: none;
+      background: var(--bg); border-bottom: 1px solid var(--border);
+      padding: 0.7rem 0 0.9rem; margin-bottom: 0.5rem;
+      display: flex; overflow-x: auto; gap: 1.4rem;
+    }
+    nav.toc .toc-group { margin-bottom: 0; flex: none; }
+    nav.toc ul { flex-direction: row; gap: 0.3rem; }
+    nav.toc a { white-space: nowrap; border-left: none; border-bottom: 2px solid transparent; border-radius: 0; }
+    nav.toc a.active { border-left-color: transparent; border-bottom-color: var(--accent); background: transparent; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="brand-row">
+      <span class="brand-mark">T</span>
+      <span class="brand-name">TASKCRAFT</span>
+    </div>
+    <h1>The TaskCraft User Manual</h1>
+    <p class="lede">A complete, step-by-step guide to planning, tracking, and shipping work in TaskCraft — from your first sign-in to configuring roles for a whole workspace.</p>
+    <div class="meta-row">
+      <span><b>Audience:</b> workspace members &amp; admins</span>
+      <span><b>Last updated:</b> September 8, 2026</span>
+      <span><b>Reading time:</b> ~25 min, or jump to any section</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="Table of contents">
+    <div class="toc-group">
+      <p class="toc-heading">Start here</p>
+      <ul>
+        <li><a href="#welcome">Welcome</a></li>
+        <li><a href="#signing-in">Signing in</a></li>
+        <li><a href="#quickstart">Quick start</a></li>
+      </ul>
+    </div>
+    <div class="toc-group">
+      <p class="toc-heading">Finding your way</p>
+      <ul>
+        <li><a href="#workspace-tour">Workspace tour</a></li>
+        <li><a href="#search">Search</a></li>
+      </ul>
+    </div>
+    <div class="toc-group">
+      <p class="toc-heading">Doing the work</p>
+      <ul>
+        <li><a href="#issues">Issues</a></li>
+        <li><a href="#projects">Projects</a></li>
+        <li><a href="#teams">Teams</a></li>
+        <li><a href="#cycles">Cycles</a></li>
+        <li><a href="#roadmaps">Roadmaps</a></li>
+      </ul>
+    </div>
+    <div class="toc-group">
+      <p class="toc-heading">Your views</p>
+      <ul>
+        <li><a href="#your-views">Inbox, My Issues &amp; Views</a></li>
+      </ul>
+    </div>
+    <div class="toc-group">
+      <p class="toc-heading">Settings</p>
+      <ul>
+        <li><a href="#settings-personal">Personal settings</a></li>
+        <li><a href="#settings-config">Reference lists</a></li>
+        <li><a href="#settings-workspace">Workspace settings</a></li>
+        <li><a href="#roles">Roles &amp; permissions</a></li>
+      </ul>
+    </div>
+    <div class="toc-group">
+      <p class="toc-heading">Reference</p>
+      <ul>
+        <li><a href="#shortcuts">Shortcuts &amp; glossary</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main>
+
+    <section id="welcome">
+      <p class="eyebrow">Overview</p>
+      <h2>Welcome to TaskCraft</h2>
+      <p>TaskCraft is where your team organizes work: <strong>teams</strong> own <strong>projects</strong>, projects contain <strong>issues</strong>, and issues move across a small set of statuses from idea to done. This manual covers every screen a member or admin will use, in the order you're likely to meet them.</p>
+      <p>Each section stands on its own — use the contents on the left (or the strip at the top, on a phone) to jump straight to what you need. Procedures are numbered; anything worth a second glance is called out in a colored box like the one below.</p>
+      <div class="callout callout-note">
+        <p class="callout-label">Note</p>
+        <p>Boxes like this one flag things worth knowing. <span class="callout-label" style="color:var(--good)">Tip</span> boxes suggest a faster way to work, and <span class="callout-label" style="color:var(--warn)">Caution</span> boxes mark actions you can't undo.</p>
+      </div>
+    </section>
+
+    <section id="signing-in">
+      <p class="eyebrow">Getting started</p>
+      <h2>Signing in</h2>
+      <p>TaskCraft accounts are created by a workspace admin — there is no public sign-up page. If you don't have credentials yet, ask your admin to invite you (see <a href="#settings-workspace">Members</a>).</p>
+      <ol class="steps">
+        <li><div class="step-body"><strong>Go to the login page.</strong><p>You'll land here automatically if you're not signed in.</p></div></li>
+        <li><div class="step-body"><strong>Enter your email and password.</strong><p>Both fields are required.</p></div></li>
+        <li><div class="step-body"><strong>Select "Sign in."</strong><p>You'll be taken straight to your Inbox.</p></div></li>
+      </ol>
+
+      <div class="table-wrap">
+        <table>
+          <caption>Demo accounts (for evaluating a fresh install)</caption>
+          <thead><tr><th>Email</th><th>Password</th><th>Workspace role</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">alice@taskcraft.dev</td><td class="mono">password123</td><td>Admin</td></tr>
+            <tr><td class="mono">bob@taskcraft.dev</td><td class="mono">password123</td><td>Member</td></tr>
+            <tr><td class="mono">carol@taskcraft.dev</td><td class="mono">password123</td><td>Member</td></tr>
+            <tr><td class="mono">dave@taskcraft.dev</td><td class="mono">password123</td><td>Member</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Staying signed in, and signing out</h3>
+      <p>Once you're in, your session lasts 30 days on that browser. To sign out, open the account menu at the bottom of the left sidebar (your avatar and name) and choose <strong>Log out</strong>.</p>
+
+      <div class="callout callout-note">
+        <p class="callout-label">Note</p>
+        <p>There's no self-service "forgot password" link. If you're locked out, a workspace admin can reset your password from <a href="#settings-workspace">Settings → Members</a> — this immediately signs you out everywhere, so you'll need the new password next time.</p>
+      </div>
+    </section>
+
+    <section id="quickstart">
+      <div class="quickstart">
+        <p class="eyebrow">Worked example</p>
+        <h3>Quick start: your first tracked issue in five steps</h3>
+        <p style="color:var(--text-muted); margin-top:-0.3rem;">A concrete walkthrough tying the core concepts together. Each step links to the full section if you want more detail.</p>
+        <ol class="steps">
+          <li><div class="step-body"><strong>Sign in.</strong><p>Use <span class="mono">alice@taskcraft.dev</span> / <span class="mono">password123</span> on a demo workspace, or your own credentials.</p></div></li>
+          <li><div class="step-body"><strong>Create a team.</strong><p>Click the <strong>+</strong> next to "Teams" in the sidebar, name it <em>Marketing</em> — TaskCraft proposes the identifier <span class="mono">MAR</span> for you — and select <strong>Create team</strong>. See <a href="#teams">Teams</a>.</p></div></li>
+          <li><div class="step-body"><strong>Create a project.</strong><p>Select <strong>+ Project</strong> at the top of the sidebar, name it <em>Q4 Launch Campaign</em>, set Team to <em>Marketing</em>, and select <strong>Publish</strong>. See <a href="#projects">Projects</a>.</p></div></li>
+          <li><div class="step-body"><strong>Create an issue.</strong><p>Select <strong>+ Issue</strong>, title it <em>Draft launch announcement</em>, set Project to <em>Q4 Launch Campaign</em>, Priority to <em>High</em>, and assign it to yourself. See <a href="#issues">Issues</a>.</p></div></li>
+          <li><div class="step-body"><strong>Find it again.</strong><p>Open <strong>My Issues</strong> in the sidebar — your new issue is there, since you're the assignee. See <a href="#your-views">Your views</a>.</p></div></li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="workspace-tour">
+      <p class="eyebrow">Finding your way</p>
+      <h2>Workspace tour</h2>
+      <p>The left sidebar is home base — it's visible on every page. From top to bottom:</p>
+
+      <div class="card-grid">
+        <div class="mini-card"><h4>Search</h4><p>A bar with a <kbd>⌘</kbd><kbd>K</kbd> hint. Opens the command palette from anywhere.</p></div>
+        <div class="mini-card"><h4>+ Issue / + Project</h4><p>Two buttons that open the create-issue dialog or create-project drawer from any screen.</p></div>
+        <div class="mini-card"><h4>Inbox · My Issues · Projects · Views · Roadmaps</h4><p>Your five cross-team working screens — see <a href="#your-views">Your views</a>.</p></div>
+        <div class="mini-card"><h4>Teams</h4><p>Every team you can see, each expandable into Issues, Cycles, Roadmaps, and Settings, plus its projects.</p></div>
+        <div class="mini-card"><h4>Invite people · Connect GitHub</h4><p>Shortcuts to the Members and Integrations settings pages.</p></div>
+        <div class="mini-card"><h4>Account menu</h4><p>Your avatar, a link to Settings, Log out, and the Light / Dark / System theme switch.</p></div>
+      </div>
+
+      <p>Private teams show a small lock icon; you'll only see one in the sidebar if you're a member of it, or your role has the <span class="mono">view_all_teams</span> permission (see <a href="#roles">Roles &amp; permissions</a>).</p>
+    </section>
+
+    <section id="search">
+      <h2>Search</h2>
+      <p>Press <kbd>⌘</kbd><kbd>K</kbd> (or <kbd>Ctrl</kbd><kbd>K</kbd> on Windows/Linux) anywhere, or select the search bar. Results are grouped into <strong>Projects</strong> and <strong>Issues</strong>, matched against title, ID, and description as you type.</p>
+      <div class="table-wrap">
+        <table>
+          <caption>Search examples</caption>
+          <thead><tr><th>Type this</th><th>What happens</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">launch</td><td>Matches any issue or project with "launch" in its title, ID, or description.</td></tr>
+            <tr><td class="mono">FRO-12</td><td>Jumps straight to that issue by ID.</td></tr>
+            <tr><td class="mono">FRO:</td><td>Scopes every result to the team whose identifier is <span class="mono">FRO</span> — shown as a removable chip you can clear to search the whole workspace again.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Selecting a project opens it; selecting an issue opens its detail view directly.</p>
+    </section>
+
+    <section id="issues">
+      <p class="eyebrow">Doing the work</p>
+      <h2>Issues</h2>
+      <p>An issue is a single unit of work — a bug, a task, a piece of a project. Every issue belongs to exactly one project, and gets an ID built from its team's identifier and a running number, like <span class="mono">FRO-42</span>.</p>
+
+      <h3>Status and priority</h3>
+      <p>Every issue has a status:</p>
+      <div class="flow">
+        <span class="pill"><span class="pill-dot" style="background:var(--text-faint)"></span>Backlog</span>
+        <span class="connector">›</span>
+        <span class="pill"><span class="pill-dot" style="background:var(--text-faint)"></span>Todo</span>
+        <span class="connector">›</span>
+        <span class="pill"><span class="pill-dot" style="background:var(--warn)"></span>In Progress</span>
+        <span class="connector">›</span>
+        <span class="pill"><span class="pill-dot" style="background:var(--good)"></span>Done</span>
+        <span class="split">or</span>
+        <span class="pill"><span class="pill-dot" style="background:var(--bad)"></span>Cancelled</span>
+      </div>
+      <p>...and a priority, shown as a small signal-strength icon on every card and row:</p>
+      <div class="priority-scale">
+        <div class="priority-item"><div class="priority-bars"><i style="height:5px"></i><i style="height:9px"></i><i style="height:13px"></i><i style="height:17px"></i></div><span>No priority</span></div>
+        <div class="priority-item"><div class="priority-bars"><i class="on" style="height:5px"></i><i style="height:9px"></i><i style="height:13px"></i><i style="height:17px"></i></div><span>Low</span></div>
+        <div class="priority-item"><div class="priority-bars"><i class="on" style="height:5px"></i><i class="on" style="height:9px"></i><i style="height:13px"></i><i style="height:17px"></i></div><span>Medium</span></div>
+        <div class="priority-item"><div class="priority-bars"><i class="on" style="height:5px"></i><i class="on" style="height:9px"></i><i class="on" style="height:13px"></i><i style="height:17px"></i></div><span>High</span></div>
+        <div class="priority-item"><div class="priority-bars"><i class="on" style="height:5px"></i><i class="on" style="height:9px"></i><i class="on" style="height:13px"></i><i class="on" style="height:17px"></i></div><span>Urgent</span></div>
+      </div>
+
+      <h3>Creating an issue</h3>
+      <p>Select <strong>+ Issue</strong> from the sidebar (or "New issue" on a team or project page, which pre-fills that team or project). Fill in the fields and select <strong>Create issue</strong>.</p>
+      <div class="table-wrap">
+        <table>
+          <caption>Create issue — fields</caption>
+          <thead><tr><th>Field</th><th>What it does</th><th>Example</th></tr></thead>
+          <tbody>
+            <tr><td class="fname">Title</td><td>Required. Short summary of the work.</td><td class="ex">"Fix keyboard overlap on iOS forms"</td></tr>
+            <tr><td class="fname">Description</td><td>Optional plain-text details.</td><td class="ex">"Repro: open the signup form on iOS Safari..."</td></tr>
+            <tr><td class="fname">Project</td><td>Required. Determines which team the issue belongs to.</td><td class="ex">Mobile App Polish</td></tr>
+            <tr><td class="fname">Status</td><td>Defaults to Backlog.</td><td class="ex">Todo</td></tr>
+            <tr><td class="fname">Priority</td><td>Defaults to No priority.</td><td class="ex">High</td></tr>
+            <tr><td class="fname">Assignee</td><td>Any workspace member, or Unassigned.</td><td class="ex">Bob Islam</td></tr>
+            <tr><td class="fname">Labels</td><td>Free-text tags — type a word and press Enter or comma.</td><td class="ex">ios, forms</td></tr>
+            <tr><td class="fname">Attachments</td><td>Attach file names for reference on the issue.</td><td class="ex">screenshot.png</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Toggle <strong>Create more</strong> before submitting to keep the dialog open and log several issues back-to-back without re-opening it each time.</p>
+
+      <div class="callout callout-local">
+        <p class="callout-label">Good to know</p>
+        <p>There's no due date, sub-issues, or comment thread on an issue today — descriptions and labels are the available detail fields. Attachments record a file name for reference; the file itself isn't stored.</p>
+      </div>
+
+      <h3>Viewing and editing an issue</h3>
+      <p>Select any issue card or row to open it. You can edit the description (saves automatically when you click away), and change Status, Priority, or Assignee directly from their dropdowns — each change saves immediately, with a confirmation toast.</p>
+      <div class="callout callout-danger">
+        <p class="callout-label">Caution</p>
+        <p>If you have permission to delete issues, a trash icon appears in the issue view. Deleting is <strong>immediate and permanent</strong> — there's no confirmation step and no undo.</p>
+      </div>
+
+      <h3>Boards: filtering, grouping, and sorting</h3>
+      <p>Anywhere you see a list of issues — My Issues, Views, a team's Issues page, a project, a cycle — you get the same toolbar:</p>
+      <ul class="plain">
+        <li><strong>Search</strong> — filters the visible list by title or ID as you type.</li>
+        <li><strong>+ Filter</strong> — narrow the list to one or more priorities.</li>
+        <li><strong>Group</strong> — organize into columns/sections by Status, Priority, or Assignee.</li>
+        <li><strong>Order</strong> — sort by Created date, Priority, or Title.</li>
+        <li><strong>Board / List</strong> — switch between kanban columns and a flat row list.</li>
+      </ul>
+      <div class="callout callout-tip">
+        <p class="callout-label">Tip</p>
+        <p>In Board view grouped by Status, drag a card into a different column to change its status in one motion — for example, dragging <span class="mono">FRO-12</span> from <em>Todo</em> into <em>In Progress</em> updates it instantly, the same as changing the Status field by hand.</p>
+      </div>
+    </section>
+
+    <section id="projects">
+      <h2>Projects</h2>
+      <p>A project groups related issues under one team, with its own lead, timeline, and milestones — the level above an issue and below a team.</p>
+
+      <h3>Creating a project</h3>
+      <p>Select <strong>+ Project</strong> from the sidebar. A drawer opens on the right.</p>
+      <div class="table-wrap">
+        <table>
+          <caption>Create project — fields</caption>
+          <thead><tr><th>Field</th><th>What it does</th><th>Example</th></tr></thead>
+          <tbody>
+            <tr><td class="fname">Project name</td><td>Required.</td><td class="ex">"Q4 Launch Campaign"</td></tr>
+            <tr><td class="fname">Description</td><td>A short brief; write your own or generate a starting point.</td><td class="ex">"Coordinate the Q4 product launch across web and email."</td></tr>
+            <tr><td class="fname">Team</td><td>Required — which team owns this project.</td><td class="ex">Marketing</td></tr>
+            <tr><td class="fname">Lead</td><td>Required. The person accountable for the project.</td><td class="ex">Alice Rahman</td></tr>
+            <tr><td class="fname">Priority</td><td>Same five-level scale as issues.</td><td class="ex">High</td></tr>
+            <tr><td class="fname">Members</td><td>Anyone who should see and work in this project.</td><td class="ex">Bob Islam, Carol Ahmed</td></tr>
+            <tr><td class="fname">Start / Target date</td><td>Optional timeline, shown on the Roadmap.</td><td class="ex">Oct 1 – Nov 15, 2026</td></tr>
+            <tr><td class="fname">Milestones</td><td>Optional named checkpoints, added inline.</td><td class="ex">"Beta launch" — ship to 10% of traffic</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout-note">
+        <p class="callout-label">Note</p>
+        <p><strong>"Create with Agent"</strong> fills in a starter description and three sample milestones for you to edit — it's a quick outline, not a live AI reading your project. Treat the result as a first draft.</p>
+      </div>
+
+      <h3>Draft vs. published</h3>
+      <p>At the bottom of the drawer, choose <strong>Save as draft</strong> to keep a project visible only to you and the members you added, or <strong>Publish</strong> to make it visible to everyone with access to its team. Draft projects show a "Draft" badge everywhere they appear, and only published projects show up on Roadmaps.</p>
+
+      <h3>The project page</h3>
+      <p>Opening a project shows its status and priority (editable inline at the top), its lead and timeline, the full issue board scoped to that project, and — on wider screens — a sidebar with the project brief and its milestones, which you can add to, edit, or check off at any time.</p>
+      <div class="flow">
+        <span class="pill"><span class="pill-dot" style="background:var(--text-faint)"></span>Backlog</span>
+        <span class="connector">›</span>
+        <span class="pill"><span class="pill-dot" style="background:var(--text-faint)"></span>Planned</span>
+        <span class="connector">›</span>
+        <span class="pill"><span class="pill-dot" style="background:var(--warn)"></span>Active</span>
+        <span class="connector">›</span>
+        <span class="pill"><span class="pill-dot" style="background:var(--good)"></span>Completed</span>
+        <span class="split">or</span>
+        <span class="pill"><span class="pill-dot" style="background:var(--bad)"></span>Cancelled</span>
+      </div>
+    </section>
+
+    <section id="teams">
+      <h2>Teams</h2>
+      <p>A team is the organizational home for a group of projects — most workspaces have a handful, one per function or product area.</p>
+
+      <h3>Creating a team</h3>
+      <ol class="steps">
+        <li><div class="step-body"><strong>Select the <span class="mono">+</span> next to "Teams" in the sidebar.</strong></div></li>
+        <li><div class="step-body"><strong>Name the team.</strong><p>TaskCraft proposes a short Identifier from the initials as you type — "Frontend" becomes <span class="mono">FRO</span> — which you can edit directly.</p></div></li>
+        <li><div class="step-body"><strong>Pick an icon and color, a Team lead, and a timezone.</strong><p>The Team lead defaults to you.</p></div></li>
+        <li><div class="step-body"><strong>Choose Private or Public.</strong><p>Public teams are visible to the whole workspace; private teams are visible only to their members and anyone with the <span class="mono">view_all_teams</span> permission.</p></div></li>
+        <li><div class="step-body"><strong>Select "Create team."</strong></div></li>
+      </ol>
+      <p>Optionally, use <strong>Clone settings from</strong> to copy an existing team's icon, color, and timezone as a starting point.</p>
+
+      <h3>Team lead</h3>
+      <p>Every team has exactly one Team lead — the person accountable for it, shown wherever teams are listed. Set it when you create the team, or change it later from the team's Settings page. The lead is always a member of the team, and TaskCraft won't let you remove them from the team while they still hold the role — reassign the lead first.</p>
+
+      <h3>Team settings and members</h3>
+      <p>Open a team, then its Settings tab. Anyone with the <span class="mono">manage_teams</span> permission can rename the team, change its lead, timezone, or privacy, and add or remove members from the Members list below. The Identifier can't be changed once a team is created, since it's baked into every issue ID.</p>
+      <div class="callout callout-note">
+        <p class="callout-label">Note</p>
+        <p>The shield icon next to a member's name in Team Settings marks them as that <em>team's</em> local admin — a separate thing from their workspace-wide role. See <a href="#roles">Roles &amp; permissions</a> for the distinction.</p>
+      </div>
+    </section>
+
+    <section id="cycles">
+      <h2>Cycles</h2>
+      <p>A cycle is a time-boxed sprint scoped to one team — a way to say "this is what we're working on this fortnight." Open a team, then its Cycles tab.</p>
+      <p>A cycle's status is calculated from its dates, not set by hand:</p>
+      <div class="flow">
+        <span class="pill"><span class="pill-dot" style="background:var(--text-faint)"></span>Upcoming</span>
+        <span class="connector">›</span>
+        <span class="pill"><span class="pill-dot" style="background:var(--warn)"></span>Active</span>
+        <span class="connector">›</span>
+        <span class="pill"><span class="pill-dot" style="background:var(--good)"></span>Completed</span>
+      </div>
+      <p>Select <strong>New cycle</strong>, give it an optional name (otherwise it's just "Cycle 5," numbered automatically), and set a start and target date. Open any cycle to add issues to it from a dropdown of the team's issues, track a progress bar of how many are Done or Cancelled, and work its board the same way as any other issue list.</p>
+    </section>
+
+    <section id="roadmaps">
+      <h2>Roadmaps</h2>
+      <p>Roadmaps show <strong>published</strong> projects on a horizontal timeline, sized and positioned by their start and target dates — a bird's-eye view of what's shipping when.</p>
+      <ul class="plain">
+        <li><strong>Roadmaps</strong> (sidebar) — every published project you can see, across every team.</li>
+        <li><strong>A team's Roadmaps tab</strong> — the same view, scoped to that one team.</li>
+      </ul>
+      <p>Use the search box and the Status/Team filters to narrow a busy roadmap, and select any row to jump to that project. Projects without a start or target date show "No timeline set" instead of a bar.</p>
+    </section>
+
+    <section id="your-views">
+      <p class="eyebrow">Doing the work</p>
+      <h2>Inbox, My Issues &amp; Views</h2>
+      <p>Three sidebar links look similar but answer different questions. Here's the difference at a glance:</p>
+      <div class="compare-grid">
+        <div class="compare-cell"><h4>Inbox</h4><p>Issues assigned to you, as a simple list, most recently updated first. Your fastest daily check-in.</p></div>
+        <div class="compare-cell"><h4>My Issues</h4><p>The same issues assigned to you, but on the full board — with search, filters, grouping, and the board/list toggle.</p></div>
+        <div class="compare-cell"><h4>Views</h4><p>Every issue you can see across every team you have access to — the whole workspace on one board, labeled "All Issues" on the page itself.</p></div>
+      </div>
+    </section>
+
+    <section id="settings-personal">
+      <p class="eyebrow">Settings</p>
+      <h2>Personal settings</h2>
+      <p>Open Settings from the account menu at the bottom of the sidebar. The Personal group covers your own account and preferences.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Page</th><th>What you can do</th></tr></thead>
+          <tbody>
+            <tr><td class="fname">Profile</td><td>Change your display name. Your email is fixed, and your avatar is generated from your initials.</td></tr>
+            <tr><td class="fname">Notifications</td><td>Toggle alerts for assignments, mentions, status changes, and a weekly digest.</td></tr>
+            <tr><td class="fname">Preferences</td><td>Switch the app theme (Light / Dark / System), plus compact rows and full-name display.</td></tr>
+            <tr><td class="fname">Security</td><td>Change your own password. You'll be signed out and returned to the login page afterward.</td></tr>
+            <tr><td class="fname">Agent Personalization</td><td>Turn milestone and brief suggestions on or off for the "Create with Agent" project outline generator.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout callout-local">
+        <p class="callout-label">Good to know</p>
+        <p>Notifications, Preferences, and Agent Personalization are saved to <strong>this browser only</strong>, not to your account — they won't follow you to a different device, and other people can't see them.</p>
+      </div>
+    </section>
+
+    <section id="settings-config">
+      <h2>Reference lists (Issues &amp; Projects settings)</h2>
+      <p>Under Settings, the Issues and Projects groups hold personal reference lists: suggested labels, named templates, and response-time targets for issues; suggested labels and templates for projects. Add, rename, or remove entries freely — they're a private checklist for you to work from when filling in an issue or project by hand.</p>
+      <div class="callout callout-local">
+        <p class="callout-label">Good to know</p>
+        <p>These lists are saved to your browser and are for your own reference — they aren't enforced when you actually create an issue or project (any label or text still works), and they're not shared with teammates. <strong>Statuses</strong> and <strong>Updates</strong>, further down the Projects group, are read-only summaries instead: the fixed project lifecycle, and a feed of every published project's current status.</p>
+      </div>
+    </section>
+
+    <section id="settings-workspace">
+      <h2>Workspace settings</h2>
+      <p>The Workspace group is where admins manage the people, teams, and structure of the whole instance. Most of these pages need a specific permission — see <a href="#roles">Roles &amp; permissions</a>.</p>
+
+      <h3>Members</h3>
+      <p>Lists everyone in the workspace with their role, email, and TaskCraft's identity fields (Bank ID, File number, Mobile). From here you can:</p>
+      <ul class="plain">
+        <li><strong>Invite people</strong> — set their name, email, identity fields, an initial password, and their workspace role.</li>
+        <li><strong>Edit</strong> a member's details or role.</li>
+        <li><strong>Reset password</strong> — sets a new password for them and signs them out everywhere.</li>
+        <li><strong>Delete</strong> a member — their past issues stay in place, just unassigned.</li>
+      </ul>
+      <div class="callout callout-note">
+        <p class="callout-label">Note</p>
+        <p>Inviting someone sets their password directly — there's no emailed invite link. Share the initial password with them through a separate, secure channel.</p>
+      </div>
+
+      <h3>Teams, Billing, Integrations</h3>
+      <p>The Teams page lists every team for quick access to its settings. Billing and Integrations are placeholders in this self-hosted build — Billing shows the current plan with no payment flow, and Integrations offers a GitHub connection that isn't wired up to a real GitHub app yet.</p>
+
+      <h3>Features</h3>
+      <p>A set of workspace-wide feature switches (AI &amp; Agents, Initiatives, Documents, Customer requests, Releases) for previewing what a fuller TaskCraft could include. Today they're bookmarks for the roadmap rather than live functionality.</p>
+    </section>
+
+    <section id="roles">
+      <h2>Roles &amp; permissions</h2>
+      <p>Every member has exactly one workspace role, and every role grants some subset of five permissions. There's no partial credit or inheritance — a permission is either on or off for that role.</p>
+
+      <div class="table-wrap">
+        <table>
+          <caption>The five permissions</caption>
+          <thead><tr><th>Permission</th><th>Grants</th></tr></thead>
+          <tbody>
+            <tr><td class="fname">Manage members</td><td>Invite, edit, and remove workspace members; reset their passwords.</td></tr>
+            <tr><td class="fname">Manage roles</td><td>Create, edit, and delete custom roles and their permissions.</td></tr>
+            <tr><td class="fname">Manage teams</td><td>Edit team settings, privacy, membership, and team lead.</td></tr>
+            <tr><td class="fname">Delete issues</td><td>Permanently delete issues.</td></tr>
+            <tr><td class="fname">View all teams</td><td>See private teams and their projects without being a member.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <caption>Built-in roles</caption>
+          <thead><tr><th>Role</th><th class="center">Manage members</th><th class="center">Manage roles</th><th class="center">Manage teams</th><th class="center">Delete issues</th><th class="center">View all teams</th></tr></thead>
+          <tbody>
+            <tr><td class="fname">Admin</td><td class="center">✓</td><td class="center">✓</td><td class="center">✓</td><td class="center">✓</td><td class="center">✓</td></tr>
+            <tr><td class="fname">Member</td><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="center">—</td><td class="center">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Creating a custom role</h3>
+      <p>Requires the Manage roles permission. Go to <strong>Settings → Roles → New role</strong>, name it, and toggle on whichever of the five permissions it should carry — for example, a "Team Lead" role with only <em>Manage teams</em> switched on. Built-in roles (Admin, Member) can be renamed or re-permissioned but not deleted; custom roles can be edited or deleted freely.</p>
+
+      <h3>Assigning a role</h3>
+      <p>Go to <strong>Settings → Members</strong>, select Edit on the member, and choose their role from the dropdown. The change applies the moment you save.</p>
+
+      <div class="callout callout-note">
+        <p class="callout-label">Note</p>
+        <p>Don't confuse this workspace role with a team's local Admin badge (see <a href="#teams">Teams</a>) — the badge only affects an icon shown in that team's member list, while the workspace role is what actually gates pages and buttons across TaskCraft.</p>
+      </div>
+    </section>
+
+    <section id="shortcuts">
+      <p class="eyebrow">Reference</p>
+      <h2>Shortcuts &amp; glossary</h2>
+      <h3>Keyboard shortcuts</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Keys</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>⌘</kbd> <kbd>K</kbd> / <kbd>Ctrl</kbd> <kbd>K</kbd></td><td>Open search from anywhere.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Glossary</h3>
+      <div class="table-wrap">
+        <table>
+          <tbody>
+            <tr><td class="fname">Team</td><td>Top-level group that owns projects and issues; has an identifier (e.g. FRO), a lead, and members.</td></tr>
+            <tr><td class="fname">Project</td><td>A body of work under one team, with its own lead, timeline, and milestones.</td></tr>
+            <tr><td class="fname">Issue</td><td>A single unit of trackable work, identified as <span class="mono">TEAM-number</span>.</td></tr>
+            <tr><td class="fname">Cycle</td><td>A dated sprint scoped to one team, with an automatically computed status.</td></tr>
+            <tr><td class="fname">Draft project</td><td>A project visible only to its creator and members, until it's published.</td></tr>
+            <tr><td class="fname">Workspace role</td><td>The single role every member holds, controlling which settings pages and actions they can use.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="faq">
+      <h2>Frequently asked questions</h2>
+
+      <h4>Can I recover a deleted issue?</h4>
+      <p>No. Deleting an issue is immediate and permanent, with no confirmation step — double-check before you select the trash icon.</p>
+
+      <h4>Why don't my Notification or Preference settings show up on another computer?</h4>
+      <p>Those pages save to the browser you're using, not to your account, so they're local to each device.</p>
+
+      <h4>Who can see a private team?</h4>
+      <p>Its own members, plus anyone whose workspace role has the "View all teams" permission — everyone else won't see it in search, the sidebar, or roadmaps.</p>
+
+      <h4>What happens to a member's issues if they're removed from the workspace?</h4>
+      <p>The issues stay exactly where they are; they simply become unassigned.</p>
+
+      <h4>Can I remove the Team lead from a team?</h4>
+      <p>Not directly — TaskCraft blocks removing a team's current lead as a member. Assign a new lead in Team Settings first, then remove the old one if needed.</p>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  TaskCraft User Manual — written for workspace members and admins.
+</footer>
+
+<script>
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var sections = links
+    .map(function (a) { return document.querySelector(a.getAttribute('href')); })
+    .filter(Boolean);
+
+  if (!('IntersectionObserver' in window) || !sections.length) return;
+
+  var current = null;
+  function setActive(id) {
+    if (current === id) return;
+    current = id;
+    links.forEach(function (a) {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+    });
+  }
+
+  var observer = new IntersectionObserver(function (entries) {
+    var visible = entries
+      .filter(function (e) { return e.isIntersecting; })
+      .sort(function (a, b) { return a.boundingClientRect.top - b.boundingClientRect.top; });
+    if (visible.length) setActive(visible[0].target.id);
+  }, { rootMargin: '-10% 0px -70% 0px', threshold: [0, 1] });
+
+  sections.forEach(function (s) { observer.observe(s); });
+  setActive(sections[0].id);
+})();
+</script>
+</body>
+</html>
