@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { requireProjectManage } from "@/lib/auth";
 
 export interface CreateProjectInput {
   name: string;
@@ -75,6 +76,10 @@ export async function updateProject(
     targetDate: string | null;
   }>,
 ) {
+  const managementFields = ["name", "description", "leadId", "startDate", "targetDate"] as const;
+  if (managementFields.some((f) => f in input)) {
+    await requireProjectManage(projectId);
+  }
   const project = await prisma.project.update({
     where: { id: projectId },
     data: {
@@ -86,4 +91,33 @@ export async function updateProject(
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/roadmaps");
   return project;
+}
+
+export async function addProjectMember(projectId: string, userId: string) {
+  await requireProjectManage(projectId);
+  const member = await prisma.projectMember.upsert({
+    where: { projectId_userId: { projectId, userId } },
+    create: { projectId, userId },
+    update: {},
+  });
+  revalidatePath(`/projects/${projectId}/settings`);
+  return member;
+}
+
+export async function removeProjectMember(projectId: string, userId: string) {
+  await requireProjectManage(projectId);
+  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { leadId: true } });
+  if (project?.leadId === userId) throw new Error("Can't remove the project lead. Assign a new lead first.");
+  await prisma.projectMember.deleteMany({ where: { projectId, userId } });
+  revalidatePath(`/projects/${projectId}/settings`);
+}
+
+export async function updateProjectMemberRole(projectId: string, userId: string, role: "ADMIN" | "MEMBER") {
+  await requireProjectManage(projectId);
+  const member = await prisma.projectMember.update({
+    where: { projectId_userId: { projectId, userId } },
+    data: { role },
+  });
+  revalidatePath(`/projects/${projectId}/settings`);
+  return member;
 }

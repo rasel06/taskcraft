@@ -106,3 +106,26 @@ export async function canAccessProject(projectId: string, user: AuthUser) {
   if (!project.team.isPrivate) return true;
   return isTeamMember(project.teamId, user.id);
 }
+
+export async function isProjectMember(projectId: string, userId: string) {
+  const membership = await prisma.projectMember.findUnique({
+    where: { projectId_userId: { projectId, userId } },
+  });
+  return !!membership;
+}
+
+// Workspace admins (manage_teams permission) can manage any project; everyone
+// else can only manage a project they actually belong to.
+export async function canManageProject(projectId: string, user: AuthUser) {
+  if (!user) return false;
+  if (can(user, "manage_teams")) return true;
+  return isProjectMember(projectId, user.id);
+}
+
+export async function requireProjectManage(projectId: string) {
+  const user = await getCurrentUser();
+  if (!user || !(await canManageProject(projectId, user))) {
+    throw new Error("You don't have permission to manage this project");
+  }
+  return user;
+}

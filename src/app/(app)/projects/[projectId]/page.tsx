@@ -12,7 +12,8 @@ import { CreateIssueDialog } from "@/components/issue/create-issue-dialog";
 import { IssueDetailModal } from "@/components/issue/issue-detail-modal";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
-import { Plus, Calendar } from "lucide-react";
+import { Plus, Calendar, Settings } from "lucide-react";
+import Link from "next/link";
 
 export default async function ProjectPage({
   params,
@@ -69,7 +70,14 @@ export default async function ProjectPage({
             <span className="text-xs text-faint-foreground">{project.team.identifier}</span>
             <h1 className="text-sm font-semibold text-foreground">{project.name}</h1>
             {project.isDraft && <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] text-muted-foreground">Draft</span>}
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-2">
+              <Link
+                href={`/projects/${project.id}/settings`}
+                className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                title="Project settings"
+              >
+                <Settings className="h-3.5 w-3.5" />
+              </Link>
               <CreateIssueDialog
                 projects={[{ id: project.id, name: project.name, teamId: project.teamId, status: project.status, isDraft: project.isDraft, teamIdentifier: project.team.identifier }]}
                 users={users}
