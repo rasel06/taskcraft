@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TaskCraft
 
-## Getting Started
+Project and issue management app: Next.js (App Router) + Tailwind CSS + shadcn-style components + Prisma/SQLite, with real password authentication and light/dark theming.
 
-First, run the development server:
+## Setup
 
 ```bash
+npm install
+npx prisma generate
+npx prisma db push   # creates prisma/dev.db from prisma/schema.prisma
+npm run db:seed      # seeds demo users (with hashed passwords), teams, projects, issues
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit http://localhost:3000 — you'll be redirected to `/login`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Authentication
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Real auth: passwords are hashed with bcrypt, sessions are DB-backed (`Session` table) and identified by an httpOnly cookie. `src/proxy.ts` (Next's middleware/proxy convention) does a fast cookie-presence redirect to `/login`; `src/app/(app)/layout.tsx` does the authoritative check (validates the session against the DB, redirects if missing/expired).
 
-## Learn More
+Members are admin-managed, not self-signup: a workspace admin creates accounts (with an initial password) from **Settings → Members**. Any signed-in member can change their own password from **Settings → Security** — doing so signs them out everywhere and they need to log back in. An admin can also reset another member's password or delete their account from the Members page (`src/actions/members.ts`); deleting a member is blocked if they still lead a project (reassign the lead first).
 
-To learn more about Next.js, take a look at the following resources:
+## Demo data & access control
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Seeding creates:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Users: **Alice** (workspace admin), Bob, Carol, Dave — all with password `password123`
+- Teams: **Frontend** (`FRO`, public), **Platform** (`PLT`, private — only Alice & Dave are members)
+- Projects and issues under each team
 
-## Deploy on Vercel
+Log in as Bob or Carol to see the private-team access control in action: the Platform team is absent from the sidebar and search results, and direct links to it or its project show "Access denied". Log in as Alice or Dave to see it.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Theming
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Light/dark/system theme via `next-themes`, toggle in the sidebar footer and in **Settings → Preferences**. Colors are semantic CSS-variable tokens (`background`, `foreground`, `muted`, `muted-foreground`, `faint-foreground`, `accent`, `border`, `input`, `ring` — defined in `src/app/globals.css`) rather than hardcoded `zinc-*` classes, so the whole app (sidebar, dialogs, board, settings) follows the toggle, not just the shell.
+
+## Key scripts
+
+- `npm run dev` / `npm run build` / `npm run start`
+- `npm run db:push` — sync `prisma/schema.prisma` to SQLite
+- `npm run db:seed` — re-run seeding (no-ops if users already exist)
+- `npm run db:studio` — Prisma Studio to browse the database
+
+## Notes
+
+- Settings pages under Personal/Issues/Projects (labels, templates, SLAs, notifications, etc.) are UI-only and persist to `localStorage` in your browser — there's no corresponding database model for them per the schema this app implements (User, Session, Team, Project, Milestone, Issue, TeamMember, ProjectMember). Profile, Members, Teams, and Security settings are real and backed by SQLite.
+- "Connect GitHub" and billing are honest placeholders (no OAuth app / payment provider wired up).
+- Issue IDs (`FRO-12`) are generated atomically per team via `Team.issueCounter`.
+# taskcraft
