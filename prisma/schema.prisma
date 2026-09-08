@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+model User {
+  id                 String           @id @default(cuid())
+  name               String
+  email              String           @unique
+  bankId             String?          @unique
+  fileNumber         String?          @unique
+  mobile             String?          @unique
+  passwordHash       String
+  avatarUrl          String?
+  roleId             String?
+  createdAt          DateTime         @default(now())
+
+  role               WorkspaceRole?   @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  projectsLed        Project[]        @relation("ProjectLead")
+  projectMemberships ProjectMember[]
+  teamMemberships    TeamMember[]
+  assignedIssues     Issue[]          @relation("IssueAssignee")
+  createdIssues      Issue[]          @relation("IssueCreator")
+  sessions           Session[]
+}
+
+model WorkspaceRole {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  isSystem    Boolean  @default(false)
+  permissions String   @default("")
+  createdAt   DateTime @default(now())
+
+  users       User[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Team {
+  id           String        @id @default(cuid())
+  name         String
+  identifier   String        @unique
+  timezone     String        @default("GMT+6:00 - Bangladesh Standard Time")
+  isPrivate    Boolean       @default(false)
+  icon         String        @default("Layers")
+  color        String        @default("indigo")
+  issueCounter Int           @default(0)
+  cycleCounter Int           @default(0)
+  parentTeamId String?
+  parentTeam   Team?         @relation("TeamHierarchy", fields: [parentTeamId], references: [id])
+  subTeams     Team[]        @relation("TeamHierarchy")
+  createdAt    DateTime      @default(now())
+
+  projects     Project[]
+  members      TeamMember[]
+  cycles       Cycle[]
+}
+
+model TeamMember {
+  id       String   @id @default(cuid())
+  teamId   String
+  userId   String
+  role     Role     @default(MEMBER)
+  joinedAt DateTime @default(now())
+
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+model Project {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  status      String          @default("Backlog")
+  priority    String          @default("No priority")
+  leadId      String
+  startDate   DateTime?
+  targetDate  DateTime?
+  isDraft     Boolean         @default(false)
+  teamId      String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  lead        User            @relation("ProjectLead", fields: [leadId], references: [id])
+  team        Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  milestones  Milestone[]
+  issues      Issue[]
+  members     ProjectMember[]
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      Role     @default(MEMBER)
+  joinedAt  DateTime @default(now())
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+}
+
+model Milestone {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues      Issue[]
+}
+
+model Cycle {
+  id         String   @id @default(cuid())
+  teamId     String
+  number     Int
+  name       String?
+  startDate  DateTime
+  targetDate DateTime
+  createdAt  DateTime @default(now())
+
+  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  issues     Issue[]
+}
+
+model Issue {
+  id           String     @id
+  number       Int
+  title        String
+  description  String?
+  status       String     @default("Backlog")
+  priority     String     @default("No priority")
+  labels       String     @default("")
+  attachments  String     @default("")
+  assigneeId   String?
+  creatorId    String?
+  projectId    String
+  milestoneId  String?
+  cycleId      String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  assignee     User?      @relation("IssueAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  creator      User?      @relation("IssueCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  project      Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  milestone    Milestone? @relation(fields: [milestoneId], references: [id])
+  cycle        Cycle?     @relation(fields: [cycleId], references: [id], onDelete: SetNull)
+}
