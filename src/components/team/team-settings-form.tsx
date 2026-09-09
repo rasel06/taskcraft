@@ -14,11 +14,11 @@ import type { UserLite } from "@/lib/types";
 
 export function TeamSettingsForm({
   team,
-  members,
+  allUsers,
   canManage,
 }: {
   team: { id: string; name: string; identifier: string; timezone: string; isPrivate: boolean; leadId: string | null };
-  members: UserLite[];
+  allUsers: UserLite[];
   canManage: boolean;
 }) {
   const [name, setName] = React.useState(team.name);
@@ -59,9 +59,9 @@ export function TeamSettingsForm({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {members.map((m) => (
-              <SelectItem key={m.id} value={m.id}>
-                {m.name}
+            {allUsers.map((u) => (
+              <SelectItem key={u.id} value={u.id}>
+                {u.name}
               </SelectItem>
             ))}
           </SelectContent>

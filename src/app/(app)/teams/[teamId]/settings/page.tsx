@@ -24,6 +24,7 @@ export default async function TeamSettingsPage({ params }: { params: Promise<{ t
   const user = await getCurrentUser();
   const allowed = await canAccessTeam(teamId, user);
   const canManage = await canManageTeam(teamId, user);
+  const allUsers = await getAllUsers();
 
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
@@ -40,7 +41,7 @@ export default async function TeamSettingsPage({ params }: { params: Promise<{ t
             <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">General</h2>
             <TeamSettingsForm
               team={team}
-              members={team.members.map((m) => m.user)}
+              allUsers={allUsers}
               canManage={canManage}
             />
           </section>
@@ -49,7 +50,7 @@ export default async function TeamSettingsPage({ params }: { params: Promise<{ t
             <TeamMembersManager
               teamId={team.id}
               members={team.members.map((m) => ({ userId: m.userId, role: m.role, user: m.user }))}
-              allUsers={await getAllUsers()}
+              allUsers={allUsers}
               canManage={canManage}
             />
           </section>
