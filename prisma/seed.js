@@ -265,7 +265,6 @@ async function main() {
   console.log("Seed complete:");
   console.log(`  Users: Alice (admin), Bob, Carol, Dave - all password: ${DEMO_PASSWORD}`);
   console.log(`  Teams: Frontend (FRO, public), Platform (PLT, private - Alice & Dave only)`);
-  console.log(`  Projects: ${website.name}, ${mobileApp.name}, ${infra.name}`);
 }
 
 main()
