@@ -34,6 +34,3 @@ COPY --from=builder /app/.next/static ./.next/static
 EXPOSE 3000
 
 CMD ["node", "server.js"]
-
-
-#docker build --build-arg NEXT_PUBLIC_BASE_URL=http://<your-ip>:3000 -t myapp .

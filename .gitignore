@@ -49,3 +49,7 @@ next-env.d.ts
 
 $SCRATCH
 /temp
+
+#VSCODE
+.vscode/
+Dockerfile.bak
