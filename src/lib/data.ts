@@ -5,11 +5,16 @@ import type { IssueView } from "@/lib/issue-view";
 
 type AuthUser = { id: string; role?: { permissions: string } | null } | null;
 
-const issueInclude = {
-  assignee: { select: { id: true, name: true, avatarUrl: true } },
-  milestone: { select: { name: true } },
-  project: { select: { name: true, team: { select: { identifier: true, isPrivate: true, id: true } } } },
-} as const;
+function issueInclude(currentUserId?: string) {
+  return {
+    assignee: { select: { id: true, name: true, avatarUrl: true } },
+    milestone: { select: { name: true } },
+    project: { select: { name: true, team: { select: { identifier: true, isPrivate: true, id: true } } } },
+    _count: { select: { comments: true } },
+    comments: { orderBy: { createdAt: "desc" as const }, take: 1, select: { userId: true, createdAt: true } },
+    lastViews: currentUserId ? { where: { userId: currentUserId }, select: { viewedAt: true } } : false,
+  } as const;
+}
 
 type RawIssue = {
   id: string;
@@ -23,9 +28,19 @@ type RawIssue = {
   assignee: { id: string; name: string; avatarUrl: string | null } | null;
   milestone: { name: string } | null;
   project: { name: string; team: { identifier: string; isPrivate: boolean; id: string } };
+  _count: { comments: number };
+  comments: { userId: string | null; createdAt: Date }[];
+  lastViews?: { viewedAt: Date }[] | false;
 };
 
-function toIssueView(issue: RawIssue): IssueView {
+function toIssueView(issue: RawIssue, currentUserId?: string): IssueView {
+  const latestComment = issue.comments[0];
+  const lastViewedAt = (issue.lastViews || undefined)?.[0]?.viewedAt ?? null;
+  const hasNewDiscussion =
+    !!latestComment &&
+    latestComment.userId !== currentUserId &&
+    (!lastViewedAt || latestComment.createdAt > lastViewedAt);
+
   return {
     id: issue.id,
     title: issue.title,
@@ -39,6 +54,8 @@ function toIssueView(issue: RawIssue): IssueView {
     milestoneName: issue.milestone?.name ?? null,
     cycleId: issue.cycleId,
     assignee: issue.assignee,
+    commentCount: issue._count.comments,
+    hasNewDiscussion,
   };
 }
 
@@ -60,27 +77,27 @@ export async function getAssignedIssues(userId: string): Promise<IssueView[]> {
   const issues = await prisma.issue.findMany({
     where: { assigneeId: userId },
     orderBy: { updatedAt: "desc" },
-    include: issueInclude,
+    include: issueInclude(userId),
   });
-  return issues.map(toIssueView);
+  return issues.map((i) => toIssueView(i, userId));
 }
 
-export async function getProjectIssues(projectId: string): Promise<IssueView[]> {
+export async function getProjectIssues(projectId: string, currentUserId?: string): Promise<IssueView[]> {
   const issues = await prisma.issue.findMany({
     where: { projectId },
     orderBy: { createdAt: "desc" },
-    include: issueInclude,
+    include: issueInclude(currentUserId),
   });
-  return issues.map(toIssueView);
+  return issues.map((i) => toIssueView(i, currentUserId));
 }
 
-export async function getTeamIssues(teamId: string): Promise<IssueView[]> {
+export async function getTeamIssues(teamId: string, currentUserId?: string): Promise<IssueView[]> {
   const issues = await prisma.issue.findMany({
     where: { project: { teamId } },
     orderBy: { createdAt: "desc" },
-    include: issueInclude,
+    include: issueInclude(currentUserId),
   });
-  return issues.map(toIssueView);
+  return issues.map((i) => toIssueView(i, currentUserId));
 }
 
 export async function getVisibleProjects(user: AuthUser, teamId?: string) {
@@ -123,9 +140,9 @@ export async function getAllVisibleIssues(user: AuthUser): Promise<IssueView[]> 
   const issues = await prisma.issue.findMany({
     where: { project: { teamId: { in: teamIds } } },
     orderBy: { createdAt: "desc" },
-    include: issueInclude,
+    include: issueInclude(user?.id),
   });
-  return issues.map(toIssueView);
+  return issues.map((i) => toIssueView(i, user?.id));
 }
 
 export async function getVisibleTeams(user: AuthUser): Promise<TeamWithProjects[]> {
@@ -178,13 +195,13 @@ export async function getTeamCycles(teamId: string): Promise<CycleOverview[]> {
   }));
 }
 
-export async function getCycleIssues(cycleId: string): Promise<IssueView[]> {
+export async function getCycleIssues(cycleId: string, currentUserId?: string): Promise<IssueView[]> {
   const issues = await prisma.issue.findMany({
     where: { cycleId },
     orderBy: { createdAt: "desc" },
-    include: issueInclude,
+    include: issueInclude(currentUserId),
   });
-  return issues.map(toIssueView);
+  return issues.map((i) => toIssueView(i, currentUserId));
 }
 
 export async function getAllUsers(): Promise<UserLite[]> {

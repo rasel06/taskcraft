@@ -117,141 +117,152 @@ export function CreateIssueDialog({
       }}
     >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent size="lg">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
+      <DialogContent size="lg" className="flex max-h-[85vh] flex-col overflow-hidden">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle>New issue</DialogTitle>
           </DialogHeader>
 
-          <div className="flex flex-col gap-3 px-5 py-4">
-            <Select
-              value={projectId}
-              onValueChange={(v) => {
-                setProjectId(v);
-                titleRef.current?.focus();
-              }}
-            >
-              <SelectTrigger autoFocus={!defaultProjectId} className="w-auto min-w-40">
-                <SelectValue placeholder="Choose a project..." />
-              </SelectTrigger>
-              <SelectContent>
-                {projects.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.teamIdentifier} · {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Input
-              ref={titleRef}
-              autoFocus={!!defaultProjectId}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Issue title"
-              className="h-9 border-none bg-transparent px-0 text-base font-medium focus-visible:ring-0"
-              required
-            />
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add description..."
-              className="min-h-24 border-none bg-transparent px-0 focus-visible:ring-0"
-            />
-
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="w-auto gap-1.5">
-                  <StatusIcon status={status} />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ISSUE_STATUSES.map((s) => (
-                    <SelectItem key={s} value={s} icon={<StatusIcon status={s} />}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger className="w-auto gap-1.5">
-                  <PriorityIcon priority={priority} />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PRIORITIES.map((p) => (
-                    <SelectItem key={p} value={p} icon={<PriorityIcon priority={p} />}>
-                      {p}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={assigneeId} onValueChange={setAssigneeId}>
-                <SelectTrigger className="w-auto gap-1.5">
-                  {assigneeId !== "unassigned" && (
-                    <UserAvatar user={users.find((u) => u.id === assigneeId)} className="h-4 w-4" />
-                  )}
-                  <SelectValue placeholder="Assignee" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {users.map((u) => (
-                    <SelectItem key={u.id} value={u.id} icon={<UserAvatar user={u} className="h-4 w-4" />}>
-                      {u.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5">
-              {labels.map((l) => (
-                <Badge key={l} variant="indigo">
-                  {l}
-                  <button
-                    type="button"
-                    onClick={() => setLabels(labels.filter((x) => x !== l))}
-                    className="ml-0.5 hover:text-white"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
-              <Input
-                value={labelInput}
-                onChange={(e) => setLabelInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === ",") {
-                    e.preventDefault();
-                    addLabel();
-                  }
+          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-5">
+            <section className="flex flex-col gap-3">
+              <Select
+                value={projectId}
+                onValueChange={(v) => {
+                  setProjectId(v);
+                  titleRef.current?.focus();
                 }}
-                placeholder="Add label + Enter"
-                className="h-6 w-32 border-none bg-transparent px-1 text-xs focus-visible:ring-0"
-              />
-            </div>
+              >
+                <SelectTrigger autoFocus={!defaultProjectId} className="h-8 w-auto min-w-40 gap-1.5 rounded-md border border-border bg-muted/30 text-xs">
+                  <SelectValue placeholder="Choose a project..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.teamIdentifier} · {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            {attachments.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {attachments.map((a) => (
-                  <Badge key={a} variant="outline">
-                    {a}
+              <Input
+                ref={titleRef}
+                autoFocus={!!defaultProjectId}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Issue title"
+                className="h-10 rounded-none border-0 border-b border-border bg-transparent px-0 text-base font-medium focus-visible:border-primary focus-visible:ring-0"
+                required
+              />
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Add a description..."
+                className="min-h-24 rounded-md border border-border bg-muted/10 px-3 py-2 text-sm focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </section>
+
+            <section className="flex flex-col gap-2 border-t border-border pt-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Properties</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger className="h-8 w-auto gap-1.5 rounded-md border border-border bg-muted/30 text-xs">
+                    <StatusIcon status={status} />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ISSUE_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s} icon={<StatusIcon status={s} />}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={priority} onValueChange={setPriority}>
+                  <SelectTrigger className="h-8 w-auto gap-1.5 rounded-md border border-border bg-muted/30 text-xs">
+                    <PriorityIcon priority={priority} />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRIORITIES.map((p) => (
+                      <SelectItem key={p} value={p} icon={<PriorityIcon priority={p} />}>
+                        {p}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={assigneeId} onValueChange={setAssigneeId}>
+                  <SelectTrigger className="h-8 w-auto gap-1.5 rounded-md border border-border bg-muted/30 text-xs">
+                    {assigneeId !== "unassigned" && (
+                      <UserAvatar user={users.find((u) => u.id === assigneeId)} className="h-4 w-4" />
+                    )}
+                    <SelectValue placeholder="Assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={u.id} icon={<UserAvatar user={u} className="h-4 w-4" />}>
+                        {u.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </section>
+
+            <section className="flex flex-col gap-2 border-t border-border pt-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Labels</h3>
+              <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-input bg-background px-2 py-1.5">
+                {labels.map((l) => (
+                  <Badge key={l} variant="indigo">
+                    {l}
                     <button
                       type="button"
-                      onClick={() => setAttachments(attachments.filter((x) => x !== a))}
+                      onClick={() => setLabels(labels.filter((x) => x !== l))}
                       className="ml-0.5 hover:text-white"
                     >
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>
                 ))}
+                <input
+                  value={labelInput}
+                  onChange={(e) => setLabelInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === ",") {
+                      e.preventDefault();
+                      addLabel();
+                    }
+                  }}
+                  placeholder={labels.length > 0 ? "Add another..." : "Add a label and press Enter"}
+                  className="h-6 min-w-32 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+                />
               </div>
+            </section>
+
+            {attachments.length > 0 && (
+              <section className="flex flex-col gap-2 border-t border-border pt-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Attachments</h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {attachments.map((a) => (
+                    <Badge key={a} variant="outline">
+                      {a}
+                      <button
+                        type="button"
+                        onClick={() => setAttachments(attachments.filter((x) => x !== a))}
+                        className="ml-0.5 hover:text-white"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              </section>
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <div className="flex items-center gap-3">
               <button
                 type="button"

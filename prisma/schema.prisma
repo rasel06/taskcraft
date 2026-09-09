@@ -32,6 +32,8 @@ model User {
   assignedIssues     Issue[]          @relation("IssueAssignee")
   createdIssues      Issue[]          @relation("IssueCreator")
   issueActivity      IssueActivity[]
+  issueComments      IssueComment[]
+  issueLastViews     IssueLastView[]
   sessions           Session[]
 }
 
@@ -170,6 +172,8 @@ model Issue {
   milestone    Milestone? @relation(fields: [milestoneId], references: [id])
   cycle        Cycle?     @relation(fields: [cycleId], references: [id], onDelete: SetNull)
   activity     IssueActivity[]
+  comments     IssueComment[]
+  lastViews    IssueLastView[]
 }
 
 // One row per field change on an Issue - the audit trail behind the
@@ -185,4 +189,47 @@ model IssueActivity {
 
   issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+// One row per message in an issue's discussion thread.
+model IssueComment {
+  id        String   @id @default(cuid())
+  issueId   String
+  userId    String?
+  parentId  String?
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  issue       Issue                    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user        User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  parent      IssueComment?            @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     IssueComment[]           @relation("CommentReplies")
+  attachments IssueCommentAttachment[]
+}
+
+model IssueCommentAttachment {
+  id        String   @id @default(cuid())
+  commentId String
+  fileName  String
+  fileType  String
+  fileSize  Int
+  url       String
+  createdAt DateTime @default(now())
+
+  comment IssueComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+}
+
+// Tracks when a user last opened an issue's discussion, so the "new
+// discussion" badge on issue cards can tell unseen comments from seen ones.
+model IssueLastView {
+  id       String   @id @default(cuid())
+  issueId  String
+  userId   String
+  viewedAt DateTime @default(now())
+
+  issue    Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([issueId, userId])
 }

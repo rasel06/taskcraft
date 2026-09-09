@@ -11,6 +11,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { CreateTeamDialog } from "@/components/team/create-team-dialog";
 import { CreateProjectDrawer } from "@/components/project/create-project-drawer";
 import { CreateIssueDialog } from "@/components/issue/create-issue-dialog";
+import { HelpDialog } from "@/components/help-dialog";
 import { Button } from "@/components/ui/button";
 import type { TeamWithProjects, UserLite } from "@/lib/types";
 
@@ -39,10 +40,13 @@ export function Sidebar({
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col border-r border-border bg-background">
       <div className="flex items-center gap-2 px-3 pt-3">
-        <div className="flex h-6 w-6 items-center justify-center rounded bg-indigo-600 text-xs font-bold text-white">
+        <div className="flex h-6 w-6 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">
           T
         </div>
         <span className="text-sm font-semibold text-foreground">TaskCraft</span>
+        <div className="ml-auto">
+          <HelpDialog />
+        </div>
       </div>
 
       <div className="flex flex-col gap-2 px-3 pt-3">
@@ -79,7 +83,7 @@ export function Sidebar({
               href={link.href}
               className={cn(
                 "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted",
-                active ? "bg-muted text-foreground" : "text-muted-foreground",
+                active ? "bg-primary-soft-bg text-primary-soft-text" : "text-muted-foreground",
               )}
             >
               <Icon className="h-4 w-4" />

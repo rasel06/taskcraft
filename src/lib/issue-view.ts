@@ -11,4 +11,6 @@ export interface IssueView {
   milestoneName: string | null;
   cycleId: string | null;
   assignee: { id: string; name: string; avatarUrl: string | null } | null;
+  commentCount: number;
+  hasNewDiscussion: boolean;
 }

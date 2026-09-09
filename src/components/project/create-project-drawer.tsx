@@ -3,7 +3,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Sparkles, Diamond, Pencil, Trash2, Plus, CalendarIcon, X } from "lucide-react";
+import { Pencil, Trash2, Plus, CalendarIcon, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,10 +16,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { PriorityIcon } from "@/components/shared/priority-icon";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { createProject } from "@/actions/projects";
 import { PRIORITIES, DATE_GRANULARITIES, type DateGranularity } from "@/lib/constants";
@@ -103,7 +105,6 @@ export function CreateProjectDrawer({
   const [msName, setMsName] = React.useState("");
   const [msDesc, setMsDesc] = React.useState("");
   const [editingKey, setEditingKey] = React.useState<string | null>(null);
-  const [generating, setGenerating] = React.useState(false);
   const [createMore, setCreateMore] = React.useState(false);
   const nameRef = React.useRef<HTMLInputElement>(null);
 
@@ -144,30 +145,16 @@ export function CreateProjectDrawer({
     setMsDesc(m.description);
   }
 
-  function generateWithAgent() {
-    if (!name.trim()) {
-      toast.error("Add a project name first");
-      return;
-    }
-    setGenerating(true);
-    setTimeout(() => {
-      setDescription(
-        (prev) =>
-          prev ||
-          `${name.trim()} delivers a focused set of improvements for the team. Outline:\n- Define scope and success criteria\n- Break work into milestones\n- Ship incrementally and gather feedback`,
-      );
-      setMilestones((prev) =>
-        prev.length
-          ? prev
-          : [
-              { key: crypto.randomUUID(), name: "Kickoff", description: "Align on scope and success criteria" },
-              { key: crypto.randomUUID(), name: "Beta", description: "Ship a usable version to early users" },
-              { key: crypto.randomUUID(), name: "Launch", description: "Full rollout" },
-            ],
-      );
-      setGenerating(false);
-      toast.success("Outline drafted - review and edit before publishing");
-    }, 900);
+  function cancelMilestoneEdit() {
+    setEditingKey(null);
+    setMsName("");
+    setMsDesc("");
+  }
+
+  function handleMilestoneKeyDown(e: React.KeyboardEvent) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    upsertMilestone();
   }
 
   async function submit(mode: "draft" | "publish") {
@@ -221,78 +208,63 @@ export function CreateProjectDrawer({
       }}
     >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent size="xl" className="max-h-[85vh] grid-rows-[auto_1fr_auto]">
-        <DialogHeader>
+      <DialogContent size="xl" className="flex max-h-[85vh] flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>New project</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-6 overflow-y-auto px-5 py-4">
-          <div className="space-y-3">
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-5">
+          <section className="flex flex-col gap-3">
+            <Select value={teamId} onValueChange={setTeamId}>
+              <SelectTrigger className="h-8 w-auto min-w-40 gap-1.5 rounded-md border border-border bg-muted/30 text-xs">
+                <SelectValue placeholder="Choose a team..." />
+              </SelectTrigger>
+              <SelectContent>
+                {teams.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name} ({t.identifier})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Input
               ref={nameRef}
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Project name"
-              className="h-9 border-none bg-transparent px-0 text-lg font-semibold focus-visible:ring-0"
+              className="h-10 rounded-none border-0 border-b border-border bg-transparent px-0 text-base font-medium focus-visible:border-primary focus-visible:ring-0"
             />
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Write a short brief..."
-              className="min-h-20 border-none bg-transparent px-0 focus-visible:ring-0"
+              className="min-h-20 rounded-md border border-border bg-muted/10 px-3 py-2 text-sm focus-visible:ring-1 focus-visible:ring-ring"
             />
-          </div>
+          </section>
 
-          <button
-            type="button"
-            onClick={generateWithAgent}
-            disabled={generating}
-            className="flex items-center gap-2 rounded-md border border-dashed border-indigo-300 bg-indigo-50 px-3 py-2.5 text-left text-sm text-indigo-700 transition-colors hover:bg-indigo-100 disabled:opacity-60 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-950/70"
-          >
-            <Sparkles className="h-4 w-4" />
-            {generating ? "Drafting outline..." : "Create with Agent — generate a brief and milestone outline"}
-          </button>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Team</Label>
-              <Select value={teamId} onValueChange={setTeamId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Team" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teams.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name} ({t.identifier})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Priority</Label>
+          <section className="flex flex-col gap-2 border-t border-border pt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Properties</h3>
+            <div className="flex flex-wrap items-center gap-2">
               <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger>
+                <SelectTrigger className="h-8 w-auto gap-1.5 rounded-md border border-border bg-muted/30 text-xs">
+                  <PriorityIcon priority={priority} />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {PRIORITIES.map((p) => (
-                    <SelectItem key={p} value={p}>
+                    <SelectItem key={p} value={p} icon={<PriorityIcon priority={p} />}>
                       {p}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
 
-            <div className="space-y-1.5">
-              <Label>Project lead</Label>
               <Select value={leadId} onValueChange={setLeadId}>
-                <SelectTrigger>
+                <SelectTrigger className="h-8 w-auto gap-1.5 rounded-md border border-border bg-muted/30 text-xs">
                   {leadId && <UserAvatar user={users.find((u) => u.id === leadId)} className="h-4 w-4" />}
-                  <SelectValue placeholder="Select lead" />
+                  <SelectValue placeholder="Project lead" />
                 </SelectTrigger>
                 <SelectContent>
                   {users.map((u) => (
@@ -302,16 +274,13 @@ export function CreateProjectDrawer({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
 
-            <div className="space-y-1.5">
-              <Label>Members</Label>
               <Select
                 value=""
                 onValueChange={(id) => setMemberIds((prev) => (prev.includes(id) ? prev : [...prev, id]))}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder={memberIds.length ? `${memberIds.length} added` : "Add members"} />
+                <SelectTrigger className="h-8 w-auto gap-1.5 rounded-md border border-border bg-muted/30 text-xs">
+                  <SelectValue placeholder={memberIds.length ? `${memberIds.length} member${memberIds.length === 1 ? "" : "s"}` : "Add members"} />
                 </SelectTrigger>
                 <SelectContent>
                   {users.map((u) => (
@@ -323,31 +292,28 @@ export function CreateProjectDrawer({
                   ))}
                 </SelectContent>
               </Select>
-              {memberIds.length > 0 && (
-                <div className="flex flex-wrap gap-1 pt-1">
-                  {memberIds.map((id) => {
-                    const u = users.find((x) => x.id === id);
-                    if (!u) return null;
-                    return (
-                      <span
-                        key={id}
-                        className="flex items-center gap-1 rounded-md bg-muted py-0.5 pl-1.5 pr-1 text-xs text-foreground"
-                      >
-                        {u.name}
-                        <button type="button" onClick={() => setMemberIds(memberIds.filter((x) => x !== id))}>
-                          <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                        </button>
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
             </div>
-          </div>
+            {memberIds.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {memberIds.map((id) => {
+                  const u = users.find((x) => x.id === id);
+                  if (!u) return null;
+                  return (
+                    <Badge key={id} variant="outline">
+                      {u.name}
+                      <button type="button" onClick={() => setMemberIds(memberIds.filter((x) => x !== id))} className="ml-0.5 hover:text-white">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
+          </section>
 
-          <div className="space-y-2">
+          <section className="flex flex-col gap-2 border-t border-border pt-4">
             <div className="flex items-center justify-between">
-              <Label>Timeline</Label>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Timeline</h3>
               <div className="flex rounded-md border border-input p-0.5">
                 {DATE_GRANULARITIES.map((g) => (
                   <button
@@ -356,7 +322,7 @@ export function CreateProjectDrawer({
                     onClick={() => setGranularity(g)}
                     className={cn(
                       "rounded px-2 py-0.5 text-xs transition-colors",
-                      granularity === g ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground",
+                      granularity === g ? "bg-primary-soft-bg text-primary-soft-text" : "text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {g}
@@ -368,58 +334,79 @@ export function CreateProjectDrawer({
               <DatePickerField label="Start date" date={startDate} onChange={setStartDate} granularity={granularity} />
               <DatePickerField label="Target date" date={targetDate} onChange={setTargetDate} granularity={granularity} />
             </div>
-          </div>
+          </section>
 
-          <div className="space-y-2">
-            <Label>Milestones</Label>
-            {milestones.length > 0 && (
-              <ul className="space-y-1">
-                {milestones.map((m) => (
+          <section className="flex flex-col gap-2 border-t border-border pt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Milestones</h3>
+            {milestones.length > 0 ? (
+              <ul className="space-y-1.5">
+                {milestones.map((m, i) => (
                   <li
                     key={m.key}
-                    className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-2.5 py-1.5"
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-md border px-3 py-2",
+                      editingKey === m.key ? "border-primary-soft-border bg-primary-soft-bg" : "border-border bg-muted/40",
+                    )}
                   >
-                    <Diamond className="h-3 w-3 shrink-0 rotate-45 border-2 border-emerald-500 bg-transparent text-transparent" />
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+                      {i + 1}
+                    </span>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm text-foreground">{m.name}</div>
+                      <div className="truncate text-sm font-medium text-foreground">{m.name}</div>
                       {m.description && <div className="truncate text-xs text-muted-foreground">{m.description}</div>}
                     </div>
-                    <button type="button" onClick={() => editMilestone(m)} className="text-muted-foreground hover:text-foreground">
+                    <button type="button" onClick={() => editMilestone(m)} className="shrink-0 text-muted-foreground hover:text-foreground">
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
                     <button
                       type="button"
-                      onClick={() => setMilestones(milestones.filter((x) => x.key !== m.key))}
-                      className="text-muted-foreground hover:text-red-400"
+                      onClick={() => {
+                        setMilestones(milestones.filter((x) => x.key !== m.key));
+                        if (editingKey === m.key) cancelMilestoneEdit();
+                      }}
+                      className="shrink-0 text-muted-foreground hover:text-red-400"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </li>
                 ))}
               </ul>
+            ) : (
+              <p className="rounded-md border border-dashed border-border px-3 py-2.5 text-xs text-faint-foreground">
+                No milestones yet — add the key checkpoints for this project.
+              </p>
             )}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-1.5 rounded-md border border-border bg-muted/20 p-2.5">
               <Input
                 value={msName}
                 onChange={(e) => setMsName(e.target.value)}
+                onKeyDown={handleMilestoneKeyDown}
                 placeholder="Milestone name"
                 className="h-8"
               />
               <Input
                 value={msDesc}
                 onChange={(e) => setMsDesc(e.target.value)}
-                placeholder="Description"
+                onKeyDown={handleMilestoneKeyDown}
+                placeholder="Description (optional)"
                 className="h-8"
               />
-              <Button type="button" variant="secondary" size="sm" onClick={upsertMilestone}>
-                <Plus className="h-3.5 w-3.5" />
-                {editingKey ? "Save" : "Add"}
-              </Button>
+              <div className="flex items-center justify-end gap-1.5 pt-0.5">
+                {editingKey && (
+                  <Button type="button" variant="ghost" size="sm" onClick={cancelMilestoneEdit}>
+                    Cancel
+                  </Button>
+                )}
+                <Button type="button" variant="secondary" size="sm" onClick={upsertMilestone} disabled={!msName.trim()}>
+                  <Plus className="h-3.5 w-3.5" />
+                  {editingKey ? "Save milestone" : "Add milestone"}
+                </Button>
+              </div>
             </div>
-          </div>
+          </section>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           <div className="flex items-center gap-3">
             <span className="text-xs text-faint-foreground">Drafts are only visible to you and members you add</span>
             <div className="flex items-center gap-2">

@@ -263,7 +263,7 @@
     <p class="lede">A complete, step-by-step guide to planning, tracking, and shipping work in TaskCraft — from your first sign-in to configuring roles for a whole workspace.</p>
     <div class="meta-row">
       <span><b>Audience:</b> workspace members &amp; admins</span>
-      <span><b>Last updated:</b> September 8, 2026</span>
+      <span><b>Last updated:</b> September 9, 2026</span>
       <span><b>Reading time:</b> ~25 min, or jump to any section</span>
     </div>
   </div>
@@ -463,15 +463,26 @@
 
       <div class="callout callout-local">
         <p class="callout-label">Good to know</p>
-        <p>There's no due date, sub-issues, or comment thread on an issue today — descriptions and labels are the available detail fields. Attachments record a file name for reference; the file itself isn't stored.</p>
+        <p>There's no due date or sub-issues on an issue today — description, labels, and the discussion thread below are the available detail fields. The Attachments field on this create form just records file <em>names</em> for reference; the files themselves aren't uploaded. For real file uploads, use the discussion thread's attachment button once the issue exists (see <a href="#issue-discussion">Discussion</a> below).</p>
       </div>
 
       <h3>Viewing and editing an issue</h3>
-      <p>Select any issue card or row to open it. You can edit the description (saves automatically when you click away), and change Status, Priority, or Assignee directly from their dropdowns — each change saves immediately, with a confirmation toast.</p>
+      <p>Select any issue card or row to open it. The dialog opens on the <strong>Detail</strong> view: edit the description (saves automatically when you click away), and change Status, Priority, or Assignee directly from their dropdowns — each change saves immediately, with a confirmation toast. Two pill buttons at the bottom — <strong>Discussion</strong> and <strong>Activity</strong> — switch the dialog to those views; a back arrow returns you to Detail.</p>
       <div class="callout callout-danger">
         <p class="callout-label">Caution</p>
         <p>If you have permission to delete issues, a trash icon appears in the issue view. Deleting is <strong>immediate and permanent</strong> — there's no confirmation step and no undo.</p>
       </div>
+
+      <h3 id="issue-discussion">Discussion</h3>
+      <p>Every issue has a discussion thread, visible to anyone who can see the issue. Messages appear as chat bubbles — yours on the right, everyone else's on the left — so it's obvious at a glance who said what.</p>
+      <ul class="plain">
+        <li><strong>Open it two ways.</strong> Select the speech-bubble icon directly on an issue's card or row to jump straight into Discussion, or open the issue and select the Discussion pill from Detail.</li>
+        <li><strong>Replies are one level deep.</strong> Selecting "Reply" on any message — including another reply — always attaches your response to that message's top-level parent, keeping the thread flat and easy to scan.</li>
+        <li><strong>Edit or delete your own messages only.</strong> Every message shows "Reply," and your own also show "Edit" and "Delete" — there's no moderator override, so once you delete a message it's gone for good (the fact that a comment existed still shows up in the Activity log).</li>
+        <li><strong>Attach files.</strong> The paperclip button on the composer (and on each reply box) uploads images (PNG/JPEG/GIF/WEBP/SVG), PDFs, Word docs, or text/CSV/Markdown files, up to 10&nbsp;MB each. Images preview inline; other files show as a named, downloadable card. Unlike the Attachments field on the create-issue form, these are real uploaded files.</li>
+        <li><strong>New messages arrive instantly.</strong> Your own comment or reply appears the moment you send it, before the server confirms it — no waiting on a page refresh.</li>
+      </ul>
+      <p>A small dot on an issue's discussion icon means there's a comment you haven't seen yet; it clears once you open the Discussion view. The Activity view is a read-only timeline of every field change, comment, reply, edit, and deletion on the issue.</p>
 
       <h3>Boards: filtering, grouping, and sorting</h3>
       <p>Anywhere you see a list of issues — My Issues, Views, a team's Issues page, a project, a cycle — you get the same toolbar:</p>
@@ -511,11 +522,6 @@
         </table>
       </div>
 
-      <div class="callout callout-note">
-        <p class="callout-label">Note</p>
-        <p><strong>"Create with Agent"</strong> fills in a starter description and three sample milestones for you to edit — it's a quick outline, not a live AI reading your project. Treat the result as a first draft.</p>
-      </div>
-
       <h3>Draft vs. published</h3>
       <p>At the bottom of the drawer, choose <strong>Save as draft</strong> to keep a project visible only to you and the members you added, or <strong>Publish</strong> to make it visible to everyone with access to its team. Draft projects show a "Draft" badge everywhere they appear, and only published projects show up on Roadmaps.</p>
 
@@ -531,6 +537,13 @@
         <span class="pill"><span class="pill-dot" style="background:var(--good)"></span>Completed</span>
         <span class="split">or</span>
         <span class="pill"><span class="pill-dot" style="background:var(--bad)"></span>Cancelled</span>
+      </div>
+
+      <h3>Project roles and members</h3>
+      <p>Alongside its Members list (added when creating the project, or later), a project has its own Settings page — select the gear icon at the top of the project page. Anyone with the <span class="mono">manage_teams</span> permission, or who's already a member of the project (any role), can open it to add or remove members and set each member's project role to <strong>Admin</strong> or <strong>Member</strong>.</p>
+      <div class="callout callout-note">
+        <p class="callout-label">Note</p>
+        <p>A project's Admin/Member role is scoped to that one project, separate from both the member's workspace role and any team-level Admin badge (see <a href="#teams">Teams</a>) — the same person can be a plain Member on one project and an Admin on another.</p>
       </div>
     </section>
 
@@ -604,15 +617,14 @@
           <tbody>
             <tr><td class="fname">Profile</td><td>Change your display name. Your email is fixed, and your avatar is generated from your initials.</td></tr>
             <tr><td class="fname">Notifications</td><td>Toggle alerts for assignments, mentions, status changes, and a weekly digest.</td></tr>
-            <tr><td class="fname">Preferences</td><td>Switch the app theme (Light / Dark / System), plus compact rows and full-name display.</td></tr>
+            <tr><td class="fname">Preferences</td><td>Switch the app theme (Light / Dark / System), pick an accent color (Indigo, Sky, Emerald, Violet, Rose, or Amber), plus compact rows and full-name display.</td></tr>
             <tr><td class="fname">Security</td><td>Change your own password. You'll be signed out and returned to the login page afterward.</td></tr>
-            <tr><td class="fname">Agent Personalization</td><td>Turn milestone and brief suggestions on or off for the "Create with Agent" project outline generator.</td></tr>
           </tbody>
         </table>
       </div>
       <div class="callout callout-local">
         <p class="callout-label">Good to know</p>
-        <p>Notifications, Preferences, and Agent Personalization are saved to <strong>this browser only</strong>, not to your account — they won't follow you to a different device, and other people can't see them.</p>
+        <p>Notifications and Preferences are saved to <strong>this browser only</strong>, not to your account — they won't follow you to a different device, and other people can't see them.</p>
       </div>
     </section>
 

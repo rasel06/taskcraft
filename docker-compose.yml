@@ -1,0 +1,17 @@
+services:
+  taskcraft:
+    container_name: taskcraft
+    image: 172.18.18.66:4040/imran/taskcraft:v1
+    pull_policy: always
+    restart: unless-stopped
+    networks:
+      - finx-network
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+networks:
+  finx-network:
+    external: true

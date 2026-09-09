@@ -10,7 +10,7 @@ const badgeVariants = cva(
         default: "border-input bg-muted text-foreground",
         outline: "border-input text-muted-foreground",
         emerald: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-400",
-        indigo: "border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950 dark:text-indigo-400",
+        indigo: "border-primary-soft-border bg-primary-soft-bg text-primary-soft-text",
       },
     },
     defaultVariants: { variant: "default" },

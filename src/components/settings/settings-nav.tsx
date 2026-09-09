@@ -12,7 +12,6 @@ const SECTIONS = [
       { href: "/settings/notifications", label: "Notifications" },
       { href: "/settings/preferences", label: "Preferences" },
       { href: "/settings/security", label: "Security" },
-      { href: "/settings/agent-personalization", label: "Agent Personalization" },
     ],
   },
   {
@@ -65,7 +64,7 @@ export function SettingsNav() {
                 href={link.href}
                 className={cn(
                   "rounded-md px-2 py-1.5 text-sm hover:bg-muted",
-                  active ? "bg-muted text-foreground" : "text-muted-foreground",
+                  active ? "bg-primary-soft-bg text-primary-soft-text" : "text-muted-foreground",
                 )}
               >
                 {link.label}

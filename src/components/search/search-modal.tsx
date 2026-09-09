@@ -119,7 +119,7 @@ export function SearchModal({ teamIdentifiers }: { teamIdentifiers: string[] }) 
       <CommandDialog open={open} onOpenChange={handleOpenChange}>
         {activeChip && (
           <div className="flex items-center gap-1.5 border-b border-border px-3 pt-2">
-            <span className="flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 text-xs text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+            <span className="flex items-center gap-1 rounded bg-primary-soft-bg px-1.5 py-0.5 text-xs text-primary-soft-text">
               {activeChip}
               <button
                 onClick={() => {

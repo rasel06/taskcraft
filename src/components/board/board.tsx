@@ -156,13 +156,13 @@ export function Board({ issues, showProject = false }: { issues: IssueView[]; sh
         <div className="ml-auto flex items-center gap-1 rounded-md border border-input p-0.5">
           <button
             onClick={() => setLayout("board")}
-            className={cn("rounded p-1", layout === "board" ? "bg-accent text-foreground" : "text-faint-foreground")}
+            className={cn("rounded p-1", layout === "board" ? "bg-primary-soft-bg text-primary-soft-text" : "text-faint-foreground")}
           >
             <LayoutGrid className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => setLayout("list")}
-            className={cn("rounded p-1", layout === "list" ? "bg-accent text-foreground" : "text-faint-foreground")}
+            className={cn("rounded p-1", layout === "list" ? "bg-primary-soft-bg text-primary-soft-text" : "text-faint-foreground")}
           >
             <Rows3 className="h-3.5 w-3.5" />
           </button>

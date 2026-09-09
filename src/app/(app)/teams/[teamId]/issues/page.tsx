@@ -24,7 +24,7 @@ export default async function TeamIssuesPage({ params }: { params: Promise<{ tea
     );
   }
 
-  const [issues, users] = await Promise.all([getTeamIssues(teamId), getAllUsers()]);
+  const [issues, users] = await Promise.all([getTeamIssues(teamId, user?.id), getAllUsers()]);
   const projects = team.projects.map((p) => ({
     id: p.id,
     name: p.name,

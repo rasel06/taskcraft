@@ -20,10 +20,10 @@ export default async function ProjectPage({
   searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ issue?: string }>;
+  searchParams: Promise<{ issue?: string; view?: string }>;
 }) {
   const { projectId } = await params;
-  const { issue: issueId } = await searchParams;
+  const { issue: issueId, view } = await searchParams;
 
   const project = await prisma.project.findUnique({
     where: { id: projectId },
@@ -48,7 +48,7 @@ export default async function ProjectPage({
     );
   }
 
-  const [issues, users] = await Promise.all([getProjectIssues(projectId), getAllUsers()]);
+  const [issues, users] = await Promise.all([getProjectIssues(projectId, user?.id), getAllUsers()]);
   const selectedIssue = issueId ? issues.find((i) => i.id === issueId) : undefined;
   const fullSelectedIssue = selectedIssue
     ? await prisma.issue.findUnique({
@@ -57,6 +57,10 @@ export default async function ProjectPage({
           activity: {
             orderBy: { createdAt: "asc" },
             include: { user: { select: { id: true, name: true, avatarUrl: true } } },
+          },
+          comments: {
+            orderBy: { createdAt: "asc" },
+            include: { user: { select: { id: true, name: true, avatarUrl: true } }, attachments: true },
           },
         },
       })
@@ -121,6 +125,7 @@ export default async function ProjectPage({
 
       {fullSelectedIssue && (
         <IssueDetailModal
+          key={`${fullSelectedIssue.id}:${view ?? "detail"}`}
           issue={{
             id: fullSelectedIssue.id,
             title: fullSelectedIssue.title,
@@ -130,6 +135,7 @@ export default async function ProjectPage({
             labels: fullSelectedIssue.labels,
             createdAt: fullSelectedIssue.createdAt.toISOString(),
             assigneeId: fullSelectedIssue.assigneeId,
+            team: { name: project.team.name, icon: project.team.icon, color: project.team.color },
             activity: fullSelectedIssue.activity.map((a) => ({
               id: a.id,
               field: a.field,
@@ -138,9 +144,20 @@ export default async function ProjectPage({
               createdAt: a.createdAt.toISOString(),
               user: a.user,
             })),
+            comments: fullSelectedIssue.comments.map((c) => ({
+              id: c.id,
+              body: c.body,
+              createdAt: c.createdAt.toISOString(),
+              updatedAt: c.updatedAt.toISOString(),
+              parentId: c.parentId,
+              user: c.user,
+              attachments: c.attachments.map((a) => ({ id: a.id, fileName: a.fileName, fileType: a.fileType, fileSize: a.fileSize, url: a.url })),
+            })),
           }}
           users={users}
+          currentUser={user ? { id: user.id, name: user.name, avatarUrl: user.avatarUrl } : undefined}
           canDelete={can(user, "delete_issues")}
+          initialView={view === "discussion" || view === "activity" ? view : "detail"}
         />
       )}
     </div>

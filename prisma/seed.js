@@ -26,10 +26,195 @@ async function main() {
   });
 
   const [alice, bob, carol, dave] = await Promise.all([
-    prisma.user.create({ data: { name: "Alice Rahman", email: "alice@taskcraft.dev", bankId: "BNK-1001", fileNumber: "FN-1001", mobile: "+8801700000001", passwordHash, roleId: adminRole.id } }),
-    prisma.user.create({ data: { name: "Bob Islam", email: "bob@taskcraft.dev", bankId: "BNK-1002", fileNumber: "FN-1002", mobile: "+8801700000002", passwordHash, roleId: memberRole.id } }),
-    prisma.user.create({ data: { name: "Carol Ahmed", email: "carol@taskcraft.dev", bankId: "BNK-1003", fileNumber: "FN-1003", mobile: "+8801700000003", passwordHash, roleId: memberRole.id } }),
-    prisma.user.create({ data: { name: "Dave Khan", email: "dave@taskcraft.dev", bankId: "BNK-1004", fileNumber: "FN-1004", mobile: "+8801700000004", passwordHash, roleId: memberRole.id } }),
+    // prisma.user.create({ data: { name: "Alice Rahman", email: "alice@taskcraft.dev", bankId: "BNK-1001", fileNumber: "FN-1001", mobile: "+8801700000001", passwordHash, roleId: adminRole.id } }),
+    // prisma.user.create({ data: { name: "Bob Islam", email: "bob@taskcraft.dev", bankId: "BNK-1002", fileNumber: "FN-1002", mobile: "+8801700000002", passwordHash, roleId: memberRole.id } }),
+    // prisma.user.create({ data: { name: "Carol Ahmed", email: "carol@taskcraft.dev", bankId: "BNK-1003", fileNumber: "FN-1003", mobile: "+8801700000003", passwordHash, roleId: memberRole.id } }),
+    // prisma.user.create({ data: { name: "Dave Khan", email: "dave@taskcraft.dev", bankId: "BNK-1004", fileNumber: "FN-1004", mobile: "+8801700000004", passwordHash, roleId: memberRole.id } }),
+
+    prisma.user.create({
+      data: {
+        name: "Md. Imran Hasan",
+        email: "imran@janatabank-bd.com",
+        bankId: "021722",
+        fileNumber: "PO-6487",
+        mobile: "01571769980", passwordHash, roleId: adminRole.id
+      }
+    }),
+
+    prisma.user.create({
+      data: {
+        name: "Raseduz Zaman Rasel",
+        email: "rasel@janatabank-bd.com",
+        bankId: "021794",
+        fileNumber: "PO(Com)-6786",
+        mobile: "+8801716620062", passwordHash, roleId: adminRole.id
+      }
+    }),
+
+    prisma.user.create({
+      data: {
+        name: "Avijit Saha",
+        email: "saha.avijit@janatabank-bd.com",
+        bankId: "024582",
+        fileNumber: "SO(com)-15857",
+        mobile: "+8801715731066", passwordHash, roleId: memberRole.id
+      }
+    }),
+
+    prisma.user.create({
+      data: {
+        name: "Shahnewaz Mahmud",
+        email: "piaash@janatabank-bd.com",
+        bankId: "026287",
+        fileNumber: "So-Com 14093",
+        mobile: "01534124876", passwordHash, roleId: memberRole.id
+      }
+    }),
+
+    prisma.user.create({
+      data: {
+        name: "Shahadat Hossain",
+        email: "shahadat.hossain@janatabank-bd.com",
+        bankId: "026364",
+        fileNumber: "SO(Com)-14185",
+        mobile: "+8801551807064", passwordHash, roleId: memberRole.id
+      }
+    }),
+
+
+
+    prisma.user.create({
+      data: {
+        name: "Mithun Kumer Ghose",
+        email: "mithun_ghose@janatabank-bd.com",
+        bankId: "028112",
+        fileNumber: "SO(com)-14833",
+        mobile: "+8801632182206", passwordHash, roleId: memberRole.id
+      }
+    }),
+
+    prisma.user.create({
+      data: {
+        name: "Hadiuzzaman Bappy",
+        email: "hbappy79@janatabank-bd.com",
+        bankId: "028459",
+        fileNumber: "SO(com)-15090",
+        mobile: "01521318670", passwordHash, roleId: memberRole.id
+      }
+    }),
+
+    prisma.user.create({
+      data: {
+        name: "Md. Minhajul Habib Mobin",
+        email: "mdminhajulhabib2000@.com",
+        bankId: "034002",
+        fileNumber: "O(IT)-14980",
+        mobile: "01874076622", passwordHash, roleId: memberRole.id
+      }
+    }),
+
+    prisma.user.create({
+      data: {
+        name: "Sifatur Rahman Sifat",
+        email: "shifaturrahman390@gmail.com",
+        bankId: "034253",
+        fileNumber: "SO(Com)-",
+        mobile: "+8801986800766", passwordHash, roleId: memberRole.id
+      }
+    })
+
+    // prisma.user.create({
+    //   data: {
+    //     name: "Raseduz Zaman Rasel",
+    //     email: "rasel@janatabank-bd.com",
+    //     bankId: "021794",
+    //     fileNumber: "PO(Com)-6786",
+    //     mobile: "+8801716620062", passwordHash, roleId: adminRole.id
+    //   }
+    // }),
+
+    // prisma.user.create({
+    //   data: {
+    //     name: "Md. Imran Hasan",
+    //     email: "imran@janatabank-bd.com",
+    //     bankId: "021722",
+    //     fileNumber: "PO-6487",
+    //     mobile: "01571769980", passwordHash, roleId: adminRole.id
+    //   }
+    // }),
+
+    // prisma.user.create({
+    //   data: {
+    //     name: "Hadiuzzaman Bappy",
+    //     email: "hbappy79@janatabank-bd.com",
+    //     bankId: "028459",
+    //     fileNumber: "SO(com)-15090",
+    //     mobile: "01521318670", passwordHash, roleId: memberRole.id
+    //   }
+    // }),
+    // prisma.user.create({
+    //   data: {
+    //     name: "Mithun Kumer Ghose",
+    //     email: "mithun_ghose@janatabank-bd.com",
+    //     bankId: "028112",
+    //     fileNumber: "SO(com)-14833",
+    //     mobile: "+8801632182206", passwordHash, roleId: memberRole.id
+    //   }
+    // }),
+
+
+    // prisma.user.create({
+    //   data: {
+    //     name: "Shahnewaz Mahmud",
+    //     email: "piaash@janatabank-bd.com",
+    //     bankId: "026287",
+    //     fileNumber: "So-Com 14093",
+    //     mobile: "01534124876", passwordHash, roleId: memberRole.id
+    //   }
+    // }),
+
+    // prisma.user.create({
+    //   data: {
+    //     name: "Shahadat Hossain",
+    //     email: "shahadat.hossain@janatabank-bd.com",
+    //     bankId: "026364",
+    //     fileNumber: "SO(Com)-14185",
+    //     mobile: "+8801551807064", passwordHash, roleId: memberRole.id
+    //   }
+    // }),
+
+
+
+    // prisma.user.create({
+    //   data: {
+    //     name: "Avijit Saha",
+    //     email: "saha.avijit@janatabank-bd.com",
+    //     bankId: "024582",
+    //     fileNumber: "SO(com)-15857",
+    //     mobile: "+8801715731066", passwordHash, roleId: memberRole.id
+    //   }
+    // }),
+    // prisma.user.create({
+    //   data: {
+    //     name: "Md. Minhajul Habib Mobin",
+    //     email: "mdminhajulhabib2000@.com",
+    //     bankId: "034002",
+    //     fileNumber: "O(IT)-14980",
+    //     mobile: "01874076622", passwordHash, roleId: memberRole.id
+    //   }
+    // }),
+
+
+    // prisma.user.create({
+    //   data: {
+    //     name: "Sifatur Rahman Sifat",
+    //     email: "shifaturrahman390@gmail.com",
+    //     bankId: "034253",
+    //     fileNumber: "SO(Com)-",
+    //     mobile: "+8801986800766", passwordHash, roleId: memberRole.id
+    //   }
+    // })
+
   ]);
 
   const frontend = await prisma.team.create({

@@ -1,4 +1,5 @@
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AccentPicker } from "@/components/accent-picker";
 import { LocalToggleList } from "@/components/settings/local-toggle-list";
 
 export default function PreferencesPage() {
@@ -8,6 +9,10 @@ export default function PreferencesPage() {
       <div className="max-w-md space-y-1.5">
         <p className="text-sm text-foreground">Theme</p>
         <ThemeToggle />
+      </div>
+      <div className="max-w-md space-y-1.5">
+        <p className="text-sm text-foreground">Accent color</p>
+        <AccentPicker />
       </div>
       <LocalToggleList
         storageKey="taskcraft.preferences"

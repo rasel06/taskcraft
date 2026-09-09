@@ -47,7 +47,10 @@ export default async function CycleDetailPage({
     );
   }
 
-  const [cycleIssues, teamIssues] = await Promise.all([getCycleIssues(cycleId), getTeamIssues(teamId)]);
+  const [cycleIssues, teamIssues] = await Promise.all([
+    getCycleIssues(cycleId, user?.id),
+    getTeamIssues(teamId, user?.id),
+  ]);
   const availableIssues = teamIssues.filter((i) => i.cycleId !== cycleId);
   const status = cycleStatus(cycle.startDate, cycle.targetDate);
   const label = cycle.name?.trim() || `Cycle ${cycle.number}`;

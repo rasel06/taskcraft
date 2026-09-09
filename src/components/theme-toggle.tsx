@@ -32,7 +32,7 @@ export function ThemeToggle({ className }: { className?: string }) {
             onClick={() => setTheme(opt.value)}
             className={cn(
               "flex h-6 w-6 items-center justify-center rounded",
-              active ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground",
+              active ? "bg-primary-soft-bg text-primary-soft-text" : "text-muted-foreground hover:text-foreground",
             )}
           >
             <Icon className="h-3.5 w-3.5" />

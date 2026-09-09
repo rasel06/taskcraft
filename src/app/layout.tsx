@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AccentProvider, ACCENT_INIT_SCRIPT } from "@/components/accent-provider";
 import { AppToaster } from "@/components/app-toaster";
 import "./globals.css";
 
@@ -28,9 +29,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
+        <script dangerouslySetInnerHTML={{ __html: ACCENT_INIT_SCRIPT }} />
         <ThemeProvider>
-          <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
-          <AppToaster />
+          <AccentProvider>
+            <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+            <AppToaster />
+          </AccentProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -75,7 +75,7 @@ export function TeamMembersManager({
               <div className="truncate text-sm text-foreground">{m.user.name}</div>
               <div className="truncate text-xs text-muted-foreground">{m.user.email}</div>
             </div>
-            {m.role === "ADMIN" && <ShieldCheck className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />}
+            {m.role === "ADMIN" && <ShieldCheck className="h-3.5 w-3.5 text-primary" />}
             {canManage && (
               <button onClick={() => remove(m.userId)} className="text-faint-foreground hover:text-red-400">
                 <X className="h-3.5 w-3.5" />
