@@ -1,13 +1,15 @@
 # TaskCraft
 
-Project and issue management app: Next.js (App Router) + Tailwind CSS + shadcn-style components + Prisma/SQLite, with real password authentication and light/dark theming.
+Project and issue management app: Next.js (App Router) + Tailwind CSS + shadcn-style components + Prisma/PostgreSQL, with real password authentication and light/dark theming.
 
 ## Setup
 
 ```bash
 npm install
+# Set DATABASE_URL in .env to your local Postgres instance,
+# e.g. postgresql://USER:PASSWORD@localhost:5432/task_craft_db
 npx prisma generate
-npx prisma db push   # creates prisma/dev.db from prisma/schema.prisma
+npx prisma db push   # creates the schema in your Postgres database
 npm run db:seed      # seeds demo users (with hashed passwords), teams, projects, issues
 npm run dev
 ```
@@ -37,13 +39,13 @@ Light/dark/system theme via `next-themes`, toggle in the sidebar footer and in *
 ## Key scripts
 
 - `npm run dev` / `npm run build` / `npm run start`
-- `npm run db:push` — sync `prisma/schema.prisma` to SQLite
+- `npm run db:push` — sync `prisma/schema.prisma` to Postgres
 - `npm run db:seed` — re-run seeding (no-ops if users already exist)
 - `npm run db:studio` — Prisma Studio to browse the database
 
 ## Notes
 
-- Settings pages under Personal/Issues/Projects (labels, templates, SLAs, notifications, etc.) are UI-only and persist to `localStorage` in your browser — there's no corresponding database model for them per the schema this app implements (User, Session, Team, Project, Milestone, Issue, TeamMember, ProjectMember). Profile, Members, Teams, and Security settings are real and backed by SQLite.
+- Settings pages under Personal/Issues/Projects (labels, templates, SLAs, notifications, etc.) are UI-only and persist to `localStorage` in your browser — there's no corresponding database model for them per the schema this app implements (User, Session, Team, Project, Milestone, Issue, TeamMember, ProjectMember). Profile, Members, Teams, and Security settings are real and backed by Postgres.
 - "Connect GitHub" and billing are honest placeholders (no OAuth app / payment provider wired up).
 - Issue IDs (`FRO-12`) are generated atomically per team via `Team.issueCounter`.
 # taskcraft
