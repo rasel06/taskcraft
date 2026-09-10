@@ -126,6 +126,8 @@ model Project {
   milestones  Milestone[]
   issues      Issue[]
   members     ProjectMember[]
+
+  @@unique([teamId, name])
 }
 
 model ProjectMember {

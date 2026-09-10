@@ -28,6 +28,12 @@ export async function createProject(input: CreateProjectInput) {
 
   const actor = await getCurrentUser();
 
+  const existing = await prisma.project.findFirst({
+    where: { teamId: input.teamId, name: { equals: name } },
+    select: { id: true },
+  });
+  if (existing) throw new Error(`A project named "${name}" already exists in this team`);
+
   const project = await prisma.project.create({
     data: {
       name,
@@ -111,6 +117,17 @@ export async function updateProject(
   const actor = await getCurrentUser();
   const before = await prisma.project.findUnique({ where: { id: projectId } });
   if (!before) throw new Error("Project not found");
+
+  if (input.name !== undefined) {
+    const name = input.name.trim();
+    if (!name) throw new Error("Project name is required");
+    input = { ...input, name };
+    const existing = await prisma.project.findFirst({
+      where: { teamId: before.teamId, name: { equals: name }, NOT: { id: projectId } },
+      select: { id: true },
+    });
+    if (existing) throw new Error(`A project named "${name}" already exists in this team`);
+  }
 
   const project = await prisma.project.update({
     where: { id: projectId },

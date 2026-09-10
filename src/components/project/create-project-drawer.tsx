@@ -261,17 +261,25 @@ export function CreateProjectDrawer({
                 </SelectContent>
               </Select>
 
-              <Select value={leadId} onValueChange={setLeadId}>
+              <Select
+                value={leadId}
+                onValueChange={(id) => {
+                  setLeadId(id);
+                  setMemberIds((prev) => prev.filter((x) => x !== id));
+                }}
+              >
                 <SelectTrigger className="h-8 w-auto gap-1.5 rounded-md border border-border bg-muted/30 text-xs">
                   {leadId && <UserAvatar user={users.find((u) => u.id === leadId)} className="h-4 w-4" />}
                   <SelectValue placeholder="Project lead" />
                 </SelectTrigger>
                 <SelectContent>
-                  {users.map((u) => (
-                    <SelectItem key={u.id} value={u.id} icon={<UserAvatar user={u} className="h-4 w-4" />}>
-                      {u.name}
-                    </SelectItem>
-                  ))}
+                  {users
+                    .filter((u) => !memberIds.includes(u.id))
+                    .map((u) => (
+                      <SelectItem key={u.id} value={u.id} icon={<UserAvatar user={u} className="h-4 w-4" />}>
+                        {u.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
 
@@ -283,13 +291,15 @@ export function CreateProjectDrawer({
                   <SelectValue placeholder={memberIds.length ? `${memberIds.length} member${memberIds.length === 1 ? "" : "s"}` : "Add members"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {users.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      <span className="flex items-center gap-2">
-                        <UserAvatar user={u} className="h-4 w-4" /> {u.name}
-                      </span>
-                    </SelectItem>
-                  ))}
+                  {users
+                    .filter((u) => u.id !== leadId)
+                    .map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        <span className="flex items-center gap-2">
+                          <UserAvatar user={u} className="h-4 w-4" /> {u.name}
+                        </span>
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
