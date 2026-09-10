@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requirePermission } from "@/lib/auth";
+import { dispatchNotification, issueRecipients, appUrl } from "@/lib/notify";
+import { formatIssueChanges, type FieldChange } from "@/lib/notify/format";
 
 export interface CreateIssueInput {
   title: string;
@@ -62,6 +64,15 @@ export async function createIssue(input: CreateIssueInput) {
   });
 
   revalidatePath("/", "layout");
+
+  const recipients = await issueRecipients(input.projectId, issue.assigneeId);
+  if (recipients.length > 0) {
+    await dispatchNotification(
+      recipients,
+      `🆕 New issue ${issue.id}: "${issue.title}" in ${project.name}\nCreated by ${user?.name ?? "someone"}\n${appUrl(`/projects/${project.id}?issue=${issue.id}`)}`,
+    );
+  }
+
   return issue;
 }
 
@@ -88,6 +99,8 @@ export async function updateIssue(
   const data: Record<string, unknown> = { ...rest };
   if (labels !== undefined) data.labels = labels.join(",");
 
+  const changes: FieldChange[] = [];
+
   const issue = await prisma.$transaction(async (tx) => {
     const updated = await tx.issue.update({ where: { id: issueId }, data });
 
@@ -95,6 +108,7 @@ export async function updateIssue(
       const fromValue = (before as unknown as Record<string, string | null>)[field];
       const toValue = (updated as unknown as Record<string, string | null>)[field];
       if (fromValue === toValue || !(field in data)) continue;
+      changes.push({ field, from: fromValue ?? null, to: toValue ?? null });
       await tx.issueActivity.create({
         data: { issueId, field, fromValue: fromValue ?? null, toValue: toValue ?? null, userId: user?.id || null },
       });
@@ -104,6 +118,18 @@ export async function updateIssue(
   });
 
   revalidatePath("/", "layout");
+
+  if (changes.length > 0) {
+    const recipients = await issueRecipients(issue.projectId, issue.assigneeId);
+    if (recipients.length > 0) {
+      const changeText = await formatIssueChanges(changes);
+      await dispatchNotification(
+        recipients,
+        `✏️ Issue ${issue.id} updated by ${user?.name ?? "someone"}\n${changeText}\n${appUrl(`/projects/${issue.projectId}?issue=${issue.id}`)}`,
+      );
+    }
+  }
+
   return issue;
 }
 

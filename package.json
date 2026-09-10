@@ -9,7 +9,8 @@
     "lint": "eslint",
     "db:seed": "node prisma/seed.js",
     "db:push": "prisma db push",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "telegram:bot": "node --env-file=.env scripts/telegram-bot.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

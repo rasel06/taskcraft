@@ -33,7 +33,7 @@ async function main() {
         email: "imran@janatabank-bd.com",
         bankId: "021722",
         fileNumber: "PO-6487",
-        mobile: "01571769980", passwordHash, roleId: adminRole.id
+        mobile: "+8801571769980", passwordHash, roleId: adminRole.id
       }
     }),
 
@@ -63,7 +63,7 @@ async function main() {
         email: "piaash@janatabank-bd.com",
         bankId: "026287",
         fileNumber: "So-Com 14093",
-        mobile: "01534124876", passwordHash, roleId: memberRole.id
+        mobile: "+8801534124876", passwordHash, roleId: memberRole.id
       }
     }),
 
@@ -95,7 +95,17 @@ async function main() {
         email: "hbappy79@janatabank-bd.com",
         bankId: "028459",
         fileNumber: "SO(com)-15090",
-        mobile: "01521318670", passwordHash, roleId: memberRole.id
+        mobile: "+8801521318670", passwordHash, roleId: memberRole.id
+      }
+    }),
+
+    prisma.user.create({
+      data: {
+        name: "Md. Maruf Hossain",
+        email: "maruficepustian@gmail.com",
+        bankId: "032990",
+        fileNumber: "SO(Com)-16488",
+        mobile: "+8801868089868", passwordHash, roleId: memberRole.id
       }
     }),
 
@@ -105,7 +115,7 @@ async function main() {
         email: "mdminhajulhabib2000@.com",
         bankId: "034002",
         fileNumber: "O(IT)-14980",
-        mobile: "01874076622", passwordHash, roleId: memberRole.id
+        mobile: "+8801874076622", passwordHash, roleId: memberRole.id
       }
     }),
 

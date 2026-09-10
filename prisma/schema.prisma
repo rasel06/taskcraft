@@ -22,6 +22,8 @@ model User {
   passwordHash       String
   avatarUrl          String?
   roleId             String?
+  telegramChatId     String?          @unique
+  notifyTelegram     Boolean          @default(false)
   createdAt          DateTime         @default(now())
 
   role               WorkspaceRole?   @relation(fields: [roleId], references: [id], onDelete: SetNull)
@@ -35,6 +37,20 @@ model User {
   issueComments      IssueComment[]
   issueLastViews     IssueLastView[]
   sessions           Session[]
+  telegramLinkTokens TelegramLinkToken[]
+}
+
+// Short-lived one-time code used to link a Telegram chat to a TaskCraft
+// user, since Telegram can only push updates to a public webhook or a
+// long-polling client - it can't be told a chat ID directly by us.
+model TelegramLinkToken {
+  id        String   @id @default(cuid())
+  userId    String
+  code      String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model WorkspaceRole {

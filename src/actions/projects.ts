@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requireProjectManage } from "@/lib/auth";
+import { requireProjectManage, getCurrentUser } from "@/lib/auth";
+import { dispatchNotification, projectRecipients, appUrl } from "@/lib/notify";
+import { formatProjectChanges, type FieldChange } from "@/lib/notify/format";
 
 export interface CreateProjectInput {
   name: string;
@@ -23,6 +25,8 @@ export async function createProject(input: CreateProjectInput) {
   if (!name) throw new Error("Project name is required");
   if (!input.teamId) throw new Error("Team is required");
   if (!input.leadId) throw new Error("Project lead is required");
+
+  const actor = await getCurrentUser();
 
   const project = await prisma.project.create({
     data: {
@@ -51,6 +55,14 @@ export async function createProject(input: CreateProjectInput) {
 
   revalidatePath("/", "layout");
 
+  const recipients = await projectRecipients(project.id);
+  if (recipients.length > 0) {
+    await dispatchNotification(
+      recipients,
+      `📁 New project "${project.name}" created by ${actor?.name ?? "someone"}\n${appUrl(`/projects/${project.id}`)}`,
+    );
+  }
+
   if (!input.isDraft) {
     redirect(`/projects/${project.id}`);
   }
@@ -59,10 +71,25 @@ export async function createProject(input: CreateProjectInput) {
 }
 
 export async function updateProjectStatus(projectId: string, status: string) {
+  const actor = await getCurrentUser();
+  const before = await prisma.project.findUnique({ where: { id: projectId }, select: { status: true, name: true } });
   const project = await prisma.project.update({ where: { id: projectId }, data: { status } });
   revalidatePath(`/projects/${projectId}`);
+
+  if (before && before.status !== status) {
+    const recipients = await projectRecipients(projectId);
+    if (recipients.length > 0) {
+      await dispatchNotification(
+        recipients,
+        `📁 Project "${project.name}" status changed by ${actor?.name ?? "someone"}\nStatus: ${before.status} → ${status}\n${appUrl(`/projects/${projectId}`)}`,
+      );
+    }
+  }
+
   return project;
 }
+
+const PROJECT_TRACKED_FIELDS = ["name", "description", "status", "priority", "leadId", "startDate", "targetDate"] as const;
 
 export async function updateProject(
   projectId: string,
@@ -80,6 +107,11 @@ export async function updateProject(
   if (managementFields.some((f) => f in input)) {
     await requireProjectManage(projectId);
   }
+
+  const actor = await getCurrentUser();
+  const before = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!before) throw new Error("Project not found");
+
   const project = await prisma.project.update({
     where: { id: projectId },
     data: {
@@ -90,6 +122,29 @@ export async function updateProject(
   });
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/roadmaps");
+
+  const changes: FieldChange[] = [];
+  for (const field of PROJECT_TRACKED_FIELDS) {
+    if (!(field in input)) continue;
+    const fromRaw = (before as unknown as Record<string, string | Date | null>)[field];
+    const toRaw = (project as unknown as Record<string, string | Date | null>)[field];
+    const fromValue = fromRaw instanceof Date ? fromRaw.toISOString() : fromRaw;
+    const toValue = toRaw instanceof Date ? toRaw.toISOString() : toRaw;
+    if (fromValue === toValue) continue;
+    changes.push({ field, from: fromValue ?? null, to: toValue ?? null });
+  }
+
+  if (changes.length > 0) {
+    const recipients = await projectRecipients(projectId);
+    if (recipients.length > 0) {
+      const changeText = await formatProjectChanges(changes);
+      await dispatchNotification(
+        recipients,
+        `✏️ Project "${project.name}" updated by ${actor?.name ?? "someone"}\n${changeText}\n${appUrl(`/projects/${projectId}`)}`,
+      );
+    }
+  }
+
   return project;
 }
 

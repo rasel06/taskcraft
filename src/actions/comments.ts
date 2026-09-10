@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, canAccessProject } from "@/lib/auth";
 import { isAllowedAttachment, MAX_ATTACHMENT_SIZE } from "@/lib/attachments";
+import { dispatchNotification, singleRecipient, appUrl } from "@/lib/notify";
 
 const commentUserSelect = { select: { id: true, name: true, avatarUrl: true } } as const;
 const commentInclude = { user: commentUserSelect, attachments: true } as const;
@@ -73,20 +74,20 @@ export async function addComment(
 ) {
   const text = body.trim();
   if (!text && !(attachments && attachments.length > 0)) throw new Error("Comment can't be empty");
-  const { user } = await requireCommentAccess(issueId);
+  const { user, projectId } = await requireCommentAccess(issueId);
 
   let resolvedParentId: string | null = null;
-  let parent: { id: string; user: { name: string } | null } | null = null;
+  let parent: { id: string; user: { id: string; name: string } | null } | null = null;
   if (parentId) {
     const parentComment = await prisma.issueComment.findUnique({
       where: { id: parentId },
-      select: { id: true, issueId: true, parentId: true, user: { select: { name: true } } },
+      select: { id: true, issueId: true, parentId: true, user: { select: { id: true, name: true } } },
     });
     if (!parentComment || parentComment.issueId !== issueId) throw new Error("Comment not found");
     // Flatten reply chains to a single level: always attach under the top-level comment.
     resolvedParentId = parentComment.parentId ?? parentComment.id;
     parent = parentComment.parentId
-      ? await prisma.issueComment.findUnique({ where: { id: parentComment.parentId }, select: { id: true, user: { select: { name: true } } } })
+      ? await prisma.issueComment.findUnique({ where: { id: parentComment.parentId }, select: { id: true, user: { select: { id: true, name: true } } } })
       : parentComment;
   }
 
@@ -122,6 +123,18 @@ export async function addComment(
   });
 
   revalidatePath("/", "layout");
+
+  if (resolvedParentId && parent?.user && parent.user.id !== user.id) {
+    const owner = await singleRecipient(parent.user.id);
+    if (owner) {
+      await dispatchNotification(
+        [owner],
+        `💬 ${user.name} replied to your message on issue ${issueId}\n"${snippet(text || "[attachment]")}"\n${appUrl(`/projects/${projectId}?issue=${issueId}&view=discussion`)}`,
+        { skipSlack: true },
+      );
+    }
+  }
+
   return comment;
 }
 
