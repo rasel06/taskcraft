@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { MessageCircle, History } from "lucide-react";
 import { StatusIcon } from "@/components/shared/status-icon";
 import { PriorityIcon } from "@/components/shared/priority-icon";
-import { UserAvatar } from "@/components/shared/user-avatar";
+import { AssigneeAvatars } from "@/components/shared/assignee-avatars";
 import { formatDate } from "@/lib/utils";
 import type { IssueView } from "@/lib/issue-view";
 
@@ -50,7 +50,7 @@ export function IssueRow({ issue, showProject }: { issue: IssueView; showProject
         </button>
       </div>
       <span className="w-20 shrink-0 text-right text-xs text-faint-foreground">{formatDate(issue.createdAt)}</span>
-      <UserAvatar user={issue.assignee} className="h-5 w-5 shrink-0" />
+      <AssigneeAvatars users={issue.assignees} className="h-5 w-5 shrink-0" />
     </div>
   );
 }

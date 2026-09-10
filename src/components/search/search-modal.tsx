@@ -30,7 +30,7 @@ interface SearchProject {
   teamIdentifier: string;
 }
 
-export function SearchModal({ teamIdentifiers }: { teamIdentifiers: string[] }) {
+export function SearchModal({ teamIdentifiers, collapsed }: { teamIdentifiers: string[]; collapsed?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -106,16 +106,26 @@ export function SearchModal({ teamIdentifiers }: { teamIdentifiers: string[] }) 
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="flex h-8 w-full items-center gap-2 rounded-md border border-input bg-background px-2.5 text-sm text-muted-foreground hover:border-input hover:text-muted-foreground"
-      >
-        <Hash className="h-3.5 w-3.5" />
-        Search
-        <kbd className="ml-auto rounded border border-input bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-          ⌘K
-        </kbd>
-      </button>
+      {collapsed ? (
+        <button
+          onClick={() => setOpen(true)}
+          title="Search (⌘K)"
+          className="flex h-8 w-full items-center justify-center rounded-md border border-input bg-background text-muted-foreground hover:text-muted-foreground"
+        >
+          <Hash className="h-3.5 w-3.5" />
+        </button>
+      ) : (
+        <button
+          onClick={() => setOpen(true)}
+          className="flex h-8 w-full items-center gap-2 rounded-md border border-input bg-background px-2.5 text-sm text-muted-foreground hover:border-input hover:text-muted-foreground"
+        >
+          <Hash className="h-3.5 w-3.5" />
+          Search
+          <kbd className="ml-auto rounded border border-input bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+            ⌘K
+          </kbd>
+        </button>
+      )}
       <CommandDialog open={open} onOpenChange={handleOpenChange}>
         {activeChip && (
           <div className="flex items-center gap-1.5 border-b border-border px-3 pt-2">

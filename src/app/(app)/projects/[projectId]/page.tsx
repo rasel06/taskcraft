@@ -54,6 +54,7 @@ export default async function ProjectPage({
     ? await prisma.issue.findUnique({
         where: { id: selectedIssue.id },
         include: {
+          assignees: { select: { userId: true } },
           activity: {
             orderBy: { createdAt: "asc" },
             include: { user: { select: { id: true, name: true, avatarUrl: true } } },
@@ -134,7 +135,7 @@ export default async function ProjectPage({
             priority: fullSelectedIssue.priority,
             labels: fullSelectedIssue.labels,
             createdAt: fullSelectedIssue.createdAt.toISOString(),
-            assigneeId: fullSelectedIssue.assigneeId,
+            assigneeIds: fullSelectedIssue.assignees.map((a) => a.userId),
             team: { name: project.team.name, icon: project.team.icon, color: project.team.color },
             activity: fullSelectedIssue.activity.map((a) => ({
               id: a.id,

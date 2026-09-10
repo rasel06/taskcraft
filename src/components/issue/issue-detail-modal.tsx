@@ -3,13 +3,20 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trash2, UserRound, MessageCircle, History, ArrowLeft } from "lucide-react";
+import { Trash2, MessageCircle, History, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
 import { StatusIcon } from "@/components/shared/status-icon";
 import { PriorityIcon } from "@/components/shared/priority-icon";
 import { UserAvatar } from "@/components/shared/user-avatar";
+import { AssigneeAvatars } from "@/components/shared/assignee-avatars";
 import { TeamIconBadge } from "@/components/shared/team-icon";
 import { updateIssue, deleteIssue } from "@/actions/issues";
 import { markIssueViewed } from "@/actions/comments";
@@ -37,7 +44,7 @@ export interface IssueDetail {
   priority: string;
   labels: string;
   createdAt: string;
-  assigneeId: string | null;
+  assigneeIds: string[];
   team: { name: string; icon: string; color: string };
   activity?: IssueActivityEntry[];
   comments?: IssueCommentEntry[];
@@ -49,15 +56,19 @@ const FIELD_LABELS: Record<string, string> = {
   description: "Description",
   status: "Status",
   priority: "Priority",
-  assigneeId: "Assignee",
+  assignees: "Assignees",
   milestoneId: "Milestone",
   cycleId: "Cycle",
   labels: "Labels",
 };
 
 function formatActivityValue(field: string, value: string | null, users: UserLite[]): string {
-  if (!value) return field === "assigneeId" ? "Unassigned" : "—";
-  if (field === "assigneeId") return users.find((u) => u.id === value)?.name ?? "Unknown";
+  if (field === "assignees") {
+    const ids = value ? value.split(",").filter(Boolean) : [];
+    if (ids.length === 0) return "Unassigned";
+    return ids.map((id) => users.find((u) => u.id === id)?.name ?? "Unknown").join(", ");
+  }
+  if (!value) return "—";
   if (field === "description" || field === "title") return value.length > 40 ? `${value.slice(0, 40)}…` : value;
   return value;
 }
@@ -238,30 +249,39 @@ export function IssueDetailModal({
                     </SelectContent>
                   </Select>
 
-                  <Select
-                    value={issue.assigneeId ?? "unassigned"}
-                    onValueChange={async (v) => {
-                      await updateIssue(issue.id, { assigneeId: v === "unassigned" ? null : v });
-                      router.refresh();
-                    }}
-                  >
-                    <SelectTrigger className="h-8 w-auto gap-1.5 rounded-md border border-border bg-muted/30 text-xs">
-                      {issue.assigneeId ? (
-                        <UserAvatar user={users.find((u) => u.id === issue.assigneeId)} className="h-4 w-4" />
-                      ) : (
-                        <UserRound className="h-3.5 w-3.5 text-muted-foreground" />
-                      )}
-                      <SelectValue placeholder="Unassigned" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex h-8 items-center gap-1.5 rounded-md border border-border bg-muted/30 px-2 text-xs text-foreground hover:bg-muted"
+                      >
+                        <AssigneeAvatars users={users.filter((u) => issue.assigneeIds.includes(u.id))} className="h-4 w-4" max={2} />
+                        {issue.assigneeIds.length > 0
+                          ? `${issue.assigneeIds.length} assignee${issue.assigneeIds.length === 1 ? "" : "s"}`
+                          : "Unassigned"}
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
                       {users.map((u) => (
-                        <SelectItem key={u.id} value={u.id} icon={<UserAvatar user={u} className="h-4 w-4" />}>
-                          {u.name}
-                        </SelectItem>
+                        <DropdownMenuCheckboxItem
+                          key={u.id}
+                          checked={issue.assigneeIds.includes(u.id)}
+                          onSelect={(e) => e.preventDefault()}
+                          onCheckedChange={async (checked) => {
+                            const next = checked
+                              ? [...issue.assigneeIds, u.id]
+                              : issue.assigneeIds.filter((id) => id !== u.id);
+                            await updateIssue(issue.id, { assigneeIds: next });
+                            router.refresh();
+                          }}
+                        >
+                          <span className="flex items-center gap-2">
+                            <UserAvatar user={u} className="h-4 w-4" /> {u.name}
+                          </span>
+                        </DropdownMenuCheckboxItem>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
                   {canDelete && (
                     <>

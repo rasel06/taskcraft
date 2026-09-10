@@ -44,7 +44,7 @@ export function CreateIssueDialog({
   const [description, setDescription] = React.useState("");
   const [status, setStatus] = React.useState<string>(ISSUE_STATUSES[0]);
   const [priority, setPriority] = React.useState<string>(PRIORITIES[0]);
-  const [assigneeId, setAssigneeId] = React.useState<string>("unassigned");
+  const [assigneeIds, setAssigneeIds] = React.useState<string[]>([]);
   const [projectId, setProjectId] = React.useState<string>(defaultProjectId ?? "");
   const [labelInput, setLabelInput] = React.useState("");
   const [labels, setLabels] = React.useState<string[]>([]);
@@ -62,7 +62,7 @@ export function CreateIssueDialog({
     resetFields();
     setStatus(ISSUE_STATUSES[0]);
     setPriority(PRIORITIES[0]);
-    setAssigneeId("unassigned");
+    setAssigneeIds([]);
     setLabels([]);
     setAttachments([]);
     setProjectId(defaultProjectId ?? "");
@@ -88,7 +88,7 @@ export function CreateIssueDialog({
         description,
         status,
         priority,
-        assigneeId: assigneeId === "unassigned" ? null : assigneeId,
+        assigneeIds,
         projectId,
         labels,
         attachments,
@@ -192,23 +192,44 @@ export function CreateIssueDialog({
                   </SelectContent>
                 </Select>
 
-                <Select value={assigneeId} onValueChange={setAssigneeId}>
+                <Select
+                  value=""
+                  onValueChange={(id) => setAssigneeIds((prev) => (prev.includes(id) ? prev : [...prev, id]))}
+                >
                   <SelectTrigger className="h-8 w-auto gap-1.5 rounded-md border border-border bg-muted/30 text-xs">
-                    {assigneeId !== "unassigned" && (
-                      <UserAvatar user={users.find((u) => u.id === assigneeId)} className="h-4 w-4" />
-                    )}
-                    <SelectValue placeholder="Assignee" />
+                    <SelectValue placeholder={assigneeIds.length ? `${assigneeIds.length} assignee${assigneeIds.length === 1 ? "" : "s"}` : "Assignees"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {users.map((u) => (
-                      <SelectItem key={u.id} value={u.id} icon={<UserAvatar user={u} className="h-4 w-4" />}>
-                        {u.name}
-                      </SelectItem>
-                    ))}
+                    {users
+                      .filter((u) => !assigneeIds.includes(u.id))
+                      .map((u) => (
+                        <SelectItem key={u.id} value={u.id} icon={<UserAvatar user={u} className="h-4 w-4" />}>
+                          {u.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
+              {assigneeIds.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {assigneeIds.map((id) => {
+                    const u = users.find((x) => x.id === id);
+                    if (!u) return null;
+                    return (
+                      <Badge key={id} variant="outline">
+                        <UserAvatar user={u} className="h-3.5 w-3.5" /> {u.name}
+                        <button
+                          type="button"
+                          onClick={() => setAssigneeIds(assigneeIds.filter((x) => x !== id))}
+                          className="ml-0.5 hover:text-white"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
             </section>
 
             <section className="flex flex-col gap-2 border-t border-border pt-4">

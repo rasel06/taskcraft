@@ -7,7 +7,7 @@ type AuthUser = { id: string; role?: { permissions: string } | null } | null;
 
 function issueInclude(currentUserId?: string) {
   return {
-    assignee: { select: { id: true, name: true, avatarUrl: true } },
+    assignees: { select: { user: { select: { id: true, name: true, avatarUrl: true } } } },
     milestone: { select: { name: true } },
     project: { select: { name: true, team: { select: { identifier: true, isPrivate: true, id: true } } } },
     _count: { select: { comments: true } },
@@ -25,7 +25,7 @@ type RawIssue = {
   createdAt: Date;
   projectId: string;
   cycleId: string | null;
-  assignee: { id: string; name: string; avatarUrl: string | null } | null;
+  assignees: { user: { id: string; name: string; avatarUrl: string | null } }[];
   milestone: { name: string } | null;
   project: { name: string; team: { identifier: string; isPrivate: boolean; id: string } };
   _count: { comments: number };
@@ -53,7 +53,7 @@ function toIssueView(issue: RawIssue, currentUserId?: string): IssueView {
     teamIdentifier: issue.project.team.identifier,
     milestoneName: issue.milestone?.name ?? null,
     cycleId: issue.cycleId,
-    assignee: issue.assignee,
+    assignees: issue.assignees.map((a) => a.user),
     commentCount: issue._count.comments,
     hasNewDiscussion,
   };
@@ -75,7 +75,7 @@ async function visibleTeamIds(user: AuthUser) {
 
 export async function getAssignedIssues(userId: string): Promise<IssueView[]> {
   const issues = await prisma.issue.findMany({
-    where: { assigneeId: userId },
+    where: { assignees: { some: { userId } } },
     orderBy: { updatedAt: "desc" },
     include: issueInclude(userId),
   });

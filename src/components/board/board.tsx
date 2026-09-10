@@ -30,10 +30,10 @@ type Layout = "board" | "list";
 
 const PRIORITY_RANK: Record<string, number> = { Urgent: 0, High: 1, Medium: 2, Low: 3, "No priority": 4 };
 
-function groupKey(issue: IssueView, groupBy: GroupBy) {
-  if (groupBy === "status") return issue.status;
-  if (groupBy === "priority") return issue.priority;
-  return issue.assignee?.name ?? "Unassigned";
+function groupKeys(issue: IssueView, groupBy: GroupBy): string[] {
+  if (groupBy === "status") return [issue.status];
+  if (groupBy === "priority") return [issue.priority];
+  return issue.assignees.length > 0 ? issue.assignees.map((a) => a.name) : ["Unassigned"];
 }
 
 export function Board({ issues, showProject = false }: { issues: IssueView[]; showProject?: boolean }) {
@@ -75,9 +75,10 @@ export function Board({ issues, showProject = false }: { issues: IssueView[]; sh
     }
     const map = new Map<string, IssueView[]>();
     filtered.forEach((issue) => {
-      const key = groupKey(issue, groupBy);
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(issue);
+      for (const key of groupKeys(issue, groupBy)) {
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push(issue);
+      }
     });
     return Array.from(map.entries());
   }, [filtered, groupBy]);

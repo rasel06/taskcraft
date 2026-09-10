@@ -14,19 +14,25 @@ import { UserAvatar } from "@/components/shared/user-avatar";
 import { logout } from "@/actions/auth";
 import type { UserLite } from "@/lib/types";
 
-export function AccountMenu({ currentUser }: { currentUser: UserLite | null }) {
+export function AccountMenu({ currentUser, collapsed }: { currentUser: UserLite | null; collapsed?: boolean }) {
   const router = useRouter();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted">
-          <UserAvatar user={currentUser} className="h-6 w-6" />
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm text-foreground">{currentUser?.name ?? "Guest"}</div>
-            <div className="truncate text-xs text-muted-foreground">{currentUser?.email}</div>
-          </div>
-        </button>
+        {collapsed ? (
+          <button title={currentUser?.name ?? "Guest"} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted">
+            <UserAvatar user={currentUser} className="h-6 w-6" />
+          </button>
+        ) : (
+          <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted">
+            <UserAvatar user={currentUser} className="h-6 w-6" />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm text-foreground">{currentUser?.name ?? "Guest"}</div>
+              <div className="truncate text-xs text-muted-foreground">{currentUser?.email}</div>
+            </div>
+          </button>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
         <DropdownMenuLabel>{currentUser?.name}</DropdownMenuLabel>

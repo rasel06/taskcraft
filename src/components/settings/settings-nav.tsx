@@ -39,6 +39,7 @@ const SECTIONS = [
       { href: "/settings/teams", label: "Teams" },
       { href: "/settings/billing", label: "Billing" },
       { href: "/settings/integrations", label: "Integrations" },
+      { href: "/settings/audit-log", label: "Audit log" },
     ],
   },
   {

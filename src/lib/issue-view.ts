@@ -10,7 +10,7 @@ export interface IssueView {
   teamIdentifier: string;
   milestoneName: string | null;
   cycleId: string | null;
-  assignee: { id: string; name: string; avatarUrl: string | null } | null;
+  assignees: { id: string; name: string; avatarUrl: string | null }[];
   commentCount: number;
   hasNewDiscussion: boolean;
 }

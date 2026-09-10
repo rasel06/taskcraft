@@ -33,5 +33,26 @@ export async function sendSlackTestMessage() {
   const user = await getCurrentUser();
   if (!user) throw new Error("Not signed in");
   if (!isSlackConfigured()) throw new Error("Slack isn't configured for this workspace yet.");
-  await sendSlackMessage(`👋 Test message from TaskCraft, triggered by ${user.name}.`);
+  const mention = user.slackUserId ? `<@${user.slackUserId}> ` : "";
+  await sendSlackMessage(`${mention}👋 Test message from TaskCraft, triggered by ${user.name}.`);
+}
+
+export async function setSlackUserId(slackUserId: string | null) {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Not signed in");
+
+  const trimmed = slackUserId?.trim() || null;
+  if (trimmed && !/^[UW][A-Z0-9]{2,}$/i.test(trimmed)) {
+    throw new Error("That doesn't look like a Slack member ID (should look like U0123ABCDE).");
+  }
+
+  await prisma.user.update({ where: { id: user.id }, data: { slackUserId: trimmed } });
+  revalidatePath("/settings/notifications");
+}
+
+export async function setSlackNotifications(enabled: boolean) {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Not signed in");
+  await prisma.user.update({ where: { id: user.id }, data: { notifySlack: enabled } });
+  revalidatePath("/settings/notifications");
 }

@@ -15,7 +15,7 @@ const SUBLINKS = [
   { key: "settings", label: "Settings", icon: Settings },
 ];
 
-export function TeamNavItem({ team }: { team: TeamWithProjects }) {
+export function TeamNavItem({ team, collapsed }: { team: TeamWithProjects; collapsed?: boolean }) {
   const pathname = usePathname();
   const isActive = pathname.startsWith(`/teams/${team.id}`);
   const [open, setOpen] = React.useState(isActive);
@@ -25,6 +25,21 @@ export function TeamNavItem({ team }: { team: TeamWithProjects }) {
     const timeout = setTimeout(() => setOpen(true), 0);
     return () => clearTimeout(timeout);
   }, [isActive]);
+
+  if (collapsed) {
+    return (
+      <Link
+        href={`/teams/${team.id}/issues`}
+        title={team.name}
+        className={cn(
+          "flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted",
+          isActive && "bg-muted",
+        )}
+      >
+        <TeamIconBadge icon={team.icon} color={team.color} className="h-5 w-5" iconClassName="h-3 w-3" />
+      </Link>
+    );
+  }
 
   return (
     <div>

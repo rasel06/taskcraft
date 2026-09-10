@@ -24,6 +24,8 @@ model User {
   roleId             String?
   telegramChatId     String?          @unique
   notifyTelegram     Boolean          @default(false)
+  slackUserId        String?          @unique
+  notifySlack        Boolean          @default(true)
   createdAt          DateTime         @default(now())
 
   role               WorkspaceRole?   @relation(fields: [roleId], references: [id], onDelete: SetNull)
@@ -31,13 +33,14 @@ model User {
   teamsLed           Team[]           @relation("TeamLead")
   projectMemberships ProjectMember[]
   teamMemberships    TeamMember[]
-  assignedIssues     Issue[]          @relation("IssueAssignee")
+  assignedIssues     IssueAssignee[]  @relation("IssueAssignee")
   createdIssues      Issue[]          @relation("IssueCreator")
   issueActivity      IssueActivity[]
   issueComments      IssueComment[]
   issueLastViews     IssueLastView[]
   sessions           Session[]
   telegramLinkTokens TelegramLinkToken[]
+  notificationLogs   NotificationLog[]
 }
 
 // Short-lived one-time code used to link a Telegram chat to a TaskCraft
@@ -51,6 +54,26 @@ model TelegramLinkToken {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Permanent audit trail of every notification the app attempted to send,
+// one row per (channel, recipient) - a Slack broadcast is one row with a
+// null recipient, a Telegram fan-out is one row per linked member.
+model NotificationLog {
+  id          String   @id @default(cuid())
+  channel     String
+  event       String
+  status      String
+  error       String?
+  message     String
+  color       String?
+  target      String?
+  recipientId String?
+  issueId     String?
+  projectId   String?
+  createdAt   DateTime @default(now())
+
+  recipient User? @relation(fields: [recipientId], references: [id], onDelete: SetNull)
 }
 
 model WorkspaceRole {
@@ -176,7 +199,6 @@ model Issue {
   priority     String     @default("No priority")
   labels       String     @default("")
   attachments  String     @default("")
-  assigneeId   String?
   creatorId    String?
   projectId    String
   milestoneId  String?
@@ -184,14 +206,27 @@ model Issue {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  assignee     User?      @relation("IssueAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   creator      User?      @relation("IssueCreator", fields: [creatorId], references: [id], onDelete: SetNull)
   project      Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   milestone    Milestone? @relation(fields: [milestoneId], references: [id])
   cycle        Cycle?     @relation(fields: [cycleId], references: [id], onDelete: SetNull)
+  assignees    IssueAssignee[]
   activity     IssueActivity[]
   comments     IssueComment[]
   lastViews    IssueLastView[]
+}
+
+// Many-to-many: an issue can have multiple assignees.
+model IssueAssignee {
+  id         String   @id @default(cuid())
+  issueId    String
+  userId     String
+  assignedAt DateTime @default(now())
+
+  issue      Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user       User     @relation("IssueAssignee", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([issueId, userId])
 }
 
 // One row per field change on an Issue - the audit trail behind the

@@ -24,6 +24,11 @@ export const PERMISSIONS = [
     label: "View all teams",
     description: "See private teams and their projects without being a member",
   },
+  {
+    key: "view_audit_log",
+    label: "View audit log",
+    description: "See the full history of notification messages sent to Telegram and Slack",
+  },
 ] as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[number]["key"];

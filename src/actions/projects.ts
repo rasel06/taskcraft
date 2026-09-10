@@ -6,6 +6,14 @@ import { prisma } from "@/lib/prisma";
 import { requireProjectManage, getCurrentUser } from "@/lib/auth";
 import { dispatchNotification, projectRecipients, appUrl } from "@/lib/notify";
 import { formatProjectChanges, type FieldChange } from "@/lib/notify/format";
+import {
+  projectCreatedMessage,
+  projectStatusMessage,
+  projectUpdatedMessage,
+  memberAddedMessage,
+  memberRemovedMessage,
+  roleChangedMessage,
+} from "@/lib/notify/templates";
 
 export interface CreateProjectInput {
   name: string;
@@ -65,7 +73,8 @@ export async function createProject(input: CreateProjectInput) {
   if (recipients.length > 0) {
     await dispatchNotification(
       recipients,
-      `📁 New project "${project.name}" created by ${actor?.name ?? "someone"}\n${appUrl(`/projects/${project.id}`)}`,
+      projectCreatedMessage({ projectName: project.name, actorName: actor?.name ?? "someone", url: appUrl(`/projects/${project.id}`) }),
+      { event: "project_created", projectId: project.id },
     );
   }
 
@@ -87,7 +96,14 @@ export async function updateProjectStatus(projectId: string, status: string) {
     if (recipients.length > 0) {
       await dispatchNotification(
         recipients,
-        `📁 Project "${project.name}" status changed by ${actor?.name ?? "someone"}\nStatus: ${before.status} → ${status}\n${appUrl(`/projects/${projectId}`)}`,
+        projectStatusMessage({
+          projectName: project.name,
+          actorName: actor?.name ?? "someone",
+          from: before.status,
+          to: status,
+          url: appUrl(`/projects/${projectId}`),
+        }),
+        { event: "project_status_changed", projectId },
       );
     }
   }
@@ -157,7 +173,13 @@ export async function updateProject(
       const changeText = await formatProjectChanges(changes);
       await dispatchNotification(
         recipients,
-        `✏️ Project "${project.name}" updated by ${actor?.name ?? "someone"}\n${changeText}\n${appUrl(`/projects/${projectId}`)}`,
+        projectUpdatedMessage({
+          projectName: project.name,
+          actorName: actor?.name ?? "someone",
+          changeText,
+          url: appUrl(`/projects/${projectId}`),
+        }),
+        { event: "project_updated", projectId },
       );
     }
   }
@@ -167,29 +189,92 @@ export async function updateProject(
 
 export async function addProjectMember(projectId: string, userId: string) {
   await requireProjectManage(projectId);
+  const actor = await getCurrentUser();
+  const [project, addedUser] = await Promise.all([
+    prisma.project.findUnique({ where: { id: projectId }, select: { name: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
+  ]);
   const member = await prisma.projectMember.upsert({
     where: { projectId_userId: { projectId, userId } },
     create: { projectId, userId },
     update: {},
   });
   revalidatePath(`/projects/${projectId}/settings`);
+
+  if (project) {
+    const recipients = await projectRecipients(projectId);
+    if (recipients.length > 0) {
+      await dispatchNotification(
+        recipients,
+        memberAddedMessage({
+          memberName: addedUser?.name ?? "Someone",
+          projectName: project.name,
+          actorName: actor?.name ?? "someone",
+          url: appUrl(`/projects/${projectId}/settings`),
+        }),
+        { event: "project_member_added", projectId },
+      );
+    }
+  }
+
   return member;
 }
 
 export async function removeProjectMember(projectId: string, userId: string) {
   await requireProjectManage(projectId);
-  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { leadId: true } });
+  const actor = await getCurrentUser();
+  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { leadId: true, name: true } });
   if (project?.leadId === userId) throw new Error("Can't remove the project lead. Assign a new lead first.");
+
+  const recipients = await projectRecipients(projectId);
+  const removedUser = recipients.find((u) => u.id === userId);
+
   await prisma.projectMember.deleteMany({ where: { projectId, userId } });
   revalidatePath(`/projects/${projectId}/settings`);
+
+  if (project && recipients.length > 0) {
+    await dispatchNotification(
+      recipients,
+      memberRemovedMessage({
+        memberName: removedUser?.name ?? "A member",
+        projectName: project.name,
+        actorName: actor?.name ?? "someone",
+        url: appUrl(`/projects/${projectId}/settings`),
+      }),
+      { event: "project_member_removed", projectId },
+    );
+  }
 }
 
 export async function updateProjectMemberRole(projectId: string, userId: string, role: "ADMIN" | "MEMBER") {
   await requireProjectManage(projectId);
+  const actor = await getCurrentUser();
+  const [project, targetUser] = await Promise.all([
+    prisma.project.findUnique({ where: { id: projectId }, select: { name: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
+  ]);
   const member = await prisma.projectMember.update({
     where: { projectId_userId: { projectId, userId } },
     data: { role },
   });
   revalidatePath(`/projects/${projectId}/settings`);
+
+  if (project) {
+    const recipients = await projectRecipients(projectId);
+    if (recipients.length > 0) {
+      await dispatchNotification(
+        recipients,
+        roleChangedMessage({
+          memberName: targetUser?.name ?? "A member",
+          projectName: project.name,
+          role,
+          actorName: actor?.name ?? "someone",
+          url: appUrl(`/projects/${projectId}/settings`),
+        }),
+        { event: "project_member_role_changed", projectId },
+      );
+    }
+  }
+
   return member;
 }

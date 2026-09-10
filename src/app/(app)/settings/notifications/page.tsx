@@ -1,7 +1,9 @@
 import { LocalToggleList } from "@/components/settings/local-toggle-list";
 import { TelegramConnectCard } from "@/components/settings/telegram-connect-card";
+import { SlackConnectCard } from "@/components/settings/slack-connect-card";
 import { getCurrentUser } from "@/lib/auth";
 import { isTelegramConfigured } from "@/lib/notify/telegram";
+import { isSlackConfigured } from "@/lib/notify/slack";
 
 export default async function NotificationsPage() {
   const user = await getCurrentUser();
@@ -27,6 +29,11 @@ export default async function NotificationsPage() {
           configured={isTelegramConfigured()}
           connected={Boolean(user?.telegramChatId)}
           notifyEnabled={user?.notifyTelegram ?? false}
+        />
+        <SlackConnectCard
+          configured={isSlackConfigured()}
+          slackUserId={user?.slackUserId ?? null}
+          notifyEnabled={user?.notifySlack ?? true}
         />
       </div>
     </div>

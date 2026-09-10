@@ -151,3 +151,29 @@ Follow this structured, step-by-step development guide. Generate complete, robus
 
 Begin by generating the Prisma Database Schema, database seeding script (populating default users, teams, and initial statuses), and then build the full Next.js page structure!
 ```
+
+---
+
+## Implemented Beyond Original Scope
+
+The sections above are the original build prompt. The live application has since grown past it. This section documents what actually exists today, so this file stays a trustworthy reference rather than a stale spec.
+
+### Notifications (Telegram + Slack)
+- Per-user Telegram linking: a member generates a one-time code in Settings → Notifications, sends `/start <code>` to the workspace bot (long-polled by `scripts/telegram-bot.js`, run via `npm run telegram:bot`), which links their `telegramChatId`.
+- Slack: a single workspace Incoming Webhook (`SLACK_WEBHOOK_URL`) posts to one channel. Members can optionally link their own Slack member ID (`slackUserId`) in Settings → Notifications to get `@mentioned` in that channel's messages instead of just seeing an unaddressed broadcast.
+- Events covered: project create/update/status-change/member-add/member-remove/role-change, issue create/update (including multi-assignee changes), team member-add/member-remove/lead-change, and discussion replies (notifies only the parent comment's author, Telegram + Slack-mention-only, never a full-channel broadcast for a 1:1 reply).
+- Message formatting: shared composer (`src/lib/notify/render.ts`, `templates.ts`) gives every notification type a consistent look — bold title, italic context line, colored status/priority indicator emoji, a footer with actor name and a link back into the app. Telegram uses `parse_mode: HTML`; Slack uses `mrkdwn` inside a colored `attachments` sidebar bar (color keyed by action type, or by target status for status-change events).
+- Delivery is fire-and-forget (`Promise.allSettled`) — a Telegram/Slack outage never fails the underlying DB write.
+- Every attempted send (per channel, per recipient) is written to a `NotificationLog` table for audit, viewable at Settings → Audit log (gated behind a `view_audit_log` permission, granted to the seeded Admin role only).
+
+### Multi-assignee issues
+- Issues support multiple assignees (`IssueAssignee` join table) instead of a single `assigneeId`. The New Issue dialog and the issue detail panel both use a multi-select (checkbox dropdown) with avatar-stack display. The board's "Group by Assignee" view places a card in every assignee's column.
+
+### Project / team integrity rules
+- Project names are unique per team (`@@unique([teamId, name])`), enforced both at the DB level and with a friendly pre-check error in `createProject`/`updateProject`.
+- In the New Project form, the Project Lead and Members pickers are mutually exclusive: picking someone as lead removes them from the members list and vice versa (the backend still always includes the lead as an ADMIN project member under the hood).
+- The Team Settings "Team lead" dropdown lists every workspace user, not just existing team members (matching what the backend already allowed).
+
+### UI
+- Default theme is light (was dark); the login page is a professional split-screen design (blue gradient brand panel + clean sign-in card), with the old demo-credentials box removed.
+- The sidebar is collapsible (icon-only rail, ~56px, state persisted in `localStorage`) via a toggle button next to the logo.

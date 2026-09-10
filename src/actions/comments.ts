@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser, canAccessProject } from "@/lib/auth";
 import { isAllowedAttachment, MAX_ATTACHMENT_SIZE } from "@/lib/attachments";
 import { dispatchNotification, singleRecipient, appUrl } from "@/lib/notify";
+import { commentReplyMessage } from "@/lib/notify/templates";
 
 const commentUserSelect = { select: { id: true, name: true, avatarUrl: true } } as const;
 const commentInclude = { user: commentUserSelect, attachments: true } as const;
@@ -129,8 +130,14 @@ export async function addComment(
     if (owner) {
       await dispatchNotification(
         [owner],
-        `💬 ${user.name} replied to your message on issue ${issueId}\n"${snippet(text || "[attachment]")}"\n${appUrl(`/projects/${projectId}?issue=${issueId}&view=discussion`)}`,
-        { skipSlack: true },
+        commentReplyMessage({
+          actorName: user.name,
+          issueId,
+          snippet: snippet(text || "[attachment]"),
+          url: appUrl(`/projects/${projectId}?issue=${issueId}&view=discussion`),
+        }),
+        { event: "comment_reply", issueId, projectId },
+        { slackMentionOnly: true },
       );
     }
   }
