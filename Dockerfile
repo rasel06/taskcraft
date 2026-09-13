@@ -20,6 +20,8 @@ ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
 
 RUN npm run build
 
+RUN npm run telegram:bot
+
 # ---------- 3. Production image ----------
 FROM node:20-alpine AS runner
 WORKDIR /app
