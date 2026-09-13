@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: task_craft_postgres
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    depends_on:
+      - postgres
+      POSTGRES_USER: ${POSTGRES_USER:-taskcraft}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-task_craft_db}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+  - "5484:5432"
+    networks:
+      - finx-network
+
+volumes:
+  postgres_data:
+    name: task_craft_postgres_data
+
+
+networks:
+  finx-network:
+    external: true
