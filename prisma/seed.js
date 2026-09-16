@@ -112,7 +112,7 @@ async function main() {
     prisma.user.create({
       data: {
         name: "Md. Minhajul Habib Mobin",
-        email: "mdminhajulhabib2000@.com",
+        email: "mdminhajulhabib2000@gmail.com",
         bankId: "034002",
         fileNumber: "O(IT)-14980",
         mobile: "+8801874076622", passwordHash, roleId: memberRole.id
