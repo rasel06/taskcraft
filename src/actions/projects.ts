@@ -223,6 +223,7 @@ export async function addProjectMember(projectId: string, userId: string) {
 export async function removeProjectMember(projectId: string, userId: string) {
   await requireProjectManage(projectId);
   const actor = await getCurrentUser();
+  if (actor?.id === userId) throw new Error("You can't remove yourself from a project.");
   const project = await prisma.project.findUnique({ where: { id: projectId }, select: { leadId: true, name: true } });
   if (project?.leadId === userId) throw new Error("Can't remove the project lead. Assign a new lead first.");
 

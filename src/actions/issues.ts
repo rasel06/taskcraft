@@ -128,6 +128,9 @@ export async function updateIssue(
       const nextIds = Array.from(new Set(assigneeIds));
       const beforeSet = new Set(beforeAssigneeIds);
       const nextSet = new Set(nextIds);
+      if (user && beforeSet.has(user.id) && !nextSet.has(user.id)) {
+        throw new Error("You can't unassign yourself from an issue.");
+      }
       const sameSet = beforeSet.size === nextSet.size && beforeAssigneeIds.every((id) => nextSet.has(id));
       if (!sameSet) {
         await tx.issueAssignee.deleteMany({ where: { issueId } });

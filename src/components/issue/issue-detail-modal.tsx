@@ -262,24 +262,38 @@ export function IssueDetailModal({
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
-                      {users.map((u) => (
-                        <DropdownMenuCheckboxItem
-                          key={u.id}
-                          checked={issue.assigneeIds.includes(u.id)}
-                          onSelect={(e) => e.preventDefault()}
-                          onCheckedChange={async (checked) => {
-                            const next = checked
-                              ? [...issue.assigneeIds, u.id]
-                              : issue.assigneeIds.filter((id) => id !== u.id);
-                            await updateIssue(issue.id, { assigneeIds: next });
-                            router.refresh();
-                          }}
-                        >
-                          <span className="flex items-center gap-2">
-                            <UserAvatar user={u} className="h-4 w-4" /> {u.name}
-                          </span>
-                        </DropdownMenuCheckboxItem>
-                      ))}
+                      {users.map((u) => {
+                        const isSelf = u.id === currentUser?.id;
+                        const locked = isSelf && issue.assigneeIds.includes(u.id);
+                        return (
+                          <DropdownMenuCheckboxItem
+                            key={u.id}
+                            checked={issue.assigneeIds.includes(u.id)}
+                            onSelect={(e) => e.preventDefault()}
+                            title={locked ? "You can't unassign yourself from an issue" : undefined}
+                            className={locked ? "opacity-60" : undefined}
+                            onCheckedChange={async (checked) => {
+                              if (locked && !checked) {
+                                toast.error("You can't unassign yourself from an issue.");
+                                return;
+                              }
+                              const next = checked
+                                ? [...issue.assigneeIds, u.id]
+                                : issue.assigneeIds.filter((id) => id !== u.id);
+                              try {
+                                await updateIssue(issue.id, { assigneeIds: next });
+                                router.refresh();
+                              } catch (err) {
+                                toast.error(err instanceof Error ? err.message : "Failed to update assignees");
+                              }
+                            }}
+                          >
+                            <span className="flex items-center gap-2">
+                              <UserAvatar user={u} className="h-4 w-4" /> {u.name}
+                            </span>
+                          </DropdownMenuCheckboxItem>
+                        );
+                      })}
                     </DropdownMenuContent>
                   </DropdownMenu>
 

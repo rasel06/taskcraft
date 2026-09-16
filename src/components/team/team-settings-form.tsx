@@ -9,7 +9,9 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { updateTeam } from "@/actions/teams";
-import { TIMEZONES } from "@/lib/constants";
+import { TIMEZONES, TEAM_ICONS, TEAM_COLORS } from "@/lib/constants";
+import { TEAM_ICON_MAP } from "@/components/shared/team-icon";
+import { cn } from "@/lib/utils";
 import type { UserLite } from "@/lib/types";
 
 export function TeamSettingsForm({
@@ -17,7 +19,16 @@ export function TeamSettingsForm({
   allUsers,
   canManage,
 }: {
-  team: { id: string; name: string; identifier: string; timezone: string; isPrivate: boolean; leadId: string | null };
+  team: {
+    id: string;
+    name: string;
+    identifier: string;
+    timezone: string;
+    isPrivate: boolean;
+    leadId: string | null;
+    icon: string;
+    color: string;
+  };
   allUsers: UserLite[];
   canManage: boolean;
 }) {
@@ -25,12 +36,14 @@ export function TeamSettingsForm({
   const [timezone, setTimezone] = React.useState(team.timezone);
   const [isPrivate, setIsPrivate] = React.useState(team.isPrivate);
   const [leadId, setLeadId] = React.useState(team.leadId ?? "");
+  const [icon, setIcon] = React.useState(team.icon);
+  const [color, setColor] = React.useState(team.color);
   const [pending, setPending] = React.useState(false);
 
   async function save() {
     setPending(true);
     try {
-      await updateTeam(team.id, { name, timezone, isPrivate, leadId: leadId || undefined });
+      await updateTeam(team.id, { name, timezone, isPrivate, leadId: leadId || undefined, icon, color });
       toast.success("Team settings saved");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save");
@@ -51,6 +64,51 @@ export function TeamSettingsForm({
       <div className="space-y-1.5">
         <Label>Identifier</Label>
         <Input value={team.identifier} disabled className="opacity-60" />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Icon</Label>
+        <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
+          {TEAM_ICONS.map((iconName) => {
+            const Icon = TEAM_ICON_MAP[iconName];
+            const selectedClass = TEAM_COLORS.find((c) => c.key === color)?.selected;
+            return (
+              <button
+                key={iconName}
+                type="button"
+                disabled={!canManage}
+                onClick={() => setIcon(iconName)}
+                title={iconName}
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-md border",
+                  icon === iconName
+                    ? selectedClass
+                    : "border-input text-muted-foreground hover:border-input hover:text-foreground",
+                )}
+              >
+                <Icon className="h-4 w-4" />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <Label>Color</Label>
+        <div className="flex flex-wrap gap-1.5">
+          {TEAM_COLORS.map((c) => (
+            <button
+              key={c.key}
+              type="button"
+              disabled={!canManage}
+              onClick={() => setColor(c.key)}
+              title={c.label}
+              className={cn(
+                "flex h-6 w-6 items-center justify-center rounded-full ring-offset-2 ring-offset-background transition-shadow",
+                c.swatch,
+                color === c.key && "ring-2 ring-foreground",
+              )}
+            />
+          ))}
+        </div>
       </div>
       <div className="space-y-1.5">
         <Label>Team lead</Label>
@@ -88,7 +146,7 @@ export function TeamSettingsForm({
           <div>
             <div className="text-sm text-foreground">{isPrivate ? "Private team" : "Public team"}</div>
             <div className="text-xs text-muted-foreground">
-              {isPrivate ? "Visible only to members and workspace admins" : "Visible to everyone in the workspace"}
+              Only members and roles with &quot;View all teams&quot; permission can access this team
             </div>
           </div>
         </div>

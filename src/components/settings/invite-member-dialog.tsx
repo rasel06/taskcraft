@@ -67,13 +67,13 @@ export function InviteMemberDialog({ roles }: { roles: { id: string; name: strin
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="primary" size="sm">
-          <UserPlus className="h-3.5 w-3.5" /> Invite people
+          <UserPlus className="h-3.5 w-3.5" /> Add member
         </Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={submit}>
           <DialogHeader>
-            <DialogTitle>Invite a member</DialogTitle>
+            <DialogTitle>Add member</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-3 px-5 py-4">
             <div className="space-y-1.5">

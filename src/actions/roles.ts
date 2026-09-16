@@ -45,7 +45,7 @@ export async function updateRole(roleId: string, input: { name?: string; permiss
 
   const role = await prisma.workspaceRole.update({ where: { id: roleId }, data });
   revalidatePath("/settings/roles");
-  revalidatePath("/settings/members");
+  revalidatePath("/members");
   revalidatePath("/", "layout");
   return role;
 }

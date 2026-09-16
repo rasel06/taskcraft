@@ -15,8 +15,10 @@ export async function GET(request: NextRequest) {
     include: { members: { select: { userId: true } } },
   });
   const visibleTeamIds = teams
-    .filter((t) => !t.isPrivate || can(user, "view_all_teams") || t.members.some((m) => m.userId === user?.id))
+    .filter((t) => can(user, "view_all_teams") || t.members.some((m) => m.userId === user?.id))
     .map((t) => t.id);
+  const seeAllProjects = can(user, "view_all_teams") || can(user, "view_all_projects");
+  const projectVisibility = seeAllProjects ? {} : { members: { some: { userId: user?.id ?? "" } } };
 
   if (q.length === 0 && !projectFilter && !teamFilter) {
     return NextResponse.json({ issues: [], projects: [] });
@@ -29,6 +31,7 @@ export async function GET(request: NextRequest) {
           teamId: { in: visibleTeamIds },
           id: projectFilter,
           team: teamFilter ? { identifier: teamFilter } : undefined,
+          ...projectVisibility,
         },
         OR: q
           ? [{ title: { contains: q } }, { id: { contains: q.toUpperCase() } }, { description: { contains: q } }]
@@ -44,6 +47,7 @@ export async function GET(request: NextRequest) {
           where: {
             teamId: { in: visibleTeamIds },
             name: q ? { contains: q } : undefined,
+            ...projectVisibility,
           },
           orderBy: { updatedAt: "desc" },
           take: 10,

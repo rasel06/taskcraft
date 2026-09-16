@@ -20,12 +20,14 @@ export function ProjectMembersManager({
   allUsers,
   leadId,
   canManage,
+  currentUserId,
 }: {
   projectId: string;
   members: Member[];
   allUsers: UserLite[];
   leadId: string;
   canManage: boolean;
+  currentUserId: string;
 }) {
   const memberIds = new Set(members.map((m) => m.userId));
   const addable = allUsers.filter((u) => !memberIds.has(u.id));
@@ -98,7 +100,7 @@ export function ProjectMembersManager({
                 <SelectItem value="MEMBER">Member</SelectItem>
               </SelectContent>
             </Select>
-            {canManage && m.userId !== leadId && (
+            {canManage && m.userId !== leadId && m.userId !== currentUserId && (
               <button onClick={() => remove(m.userId)} className="text-faint-foreground hover:text-red-400">
                 <X className="h-3.5 w-3.5" />
               </button>

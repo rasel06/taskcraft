@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/permissions";
+import { ISSUE_STATUSES } from "@/lib/constants";
 import type { TeamWithProjects, UserLite, ProjectOverview, CycleOverview, CycleStatus } from "@/lib/types";
 import type { IssueView } from "@/lib/issue-view";
 
@@ -66,10 +67,14 @@ function cycleStatus(startDate: Date, targetDate: Date): CycleStatus {
   return "Active";
 }
 
+function canSeeAllProjects(user: AuthUser) {
+  return can(user, "view_all_teams") || can(user, "view_all_projects");
+}
+
 async function visibleTeamIds(user: AuthUser) {
   const teams = await prisma.team.findMany({ include: { members: { select: { userId: true } } } });
   return teams
-    .filter((t) => !t.isPrivate || can(user, "view_all_teams") || t.members.some((m) => m.userId === user?.id))
+    .filter((t) => can(user, "view_all_teams") || t.members.some((m) => m.userId === user?.id))
     .map((t) => t.id);
 }
 
@@ -103,7 +108,11 @@ export async function getTeamIssues(teamId: string, currentUserId?: string): Pro
 export async function getVisibleProjects(user: AuthUser, teamId?: string) {
   const teamIds = teamId ? [teamId] : await visibleTeamIds(user);
   const projects = await prisma.project.findMany({
-    where: { teamId: { in: teamIds }, isDraft: false },
+    where: {
+      teamId: { in: teamIds },
+      isDraft: false,
+      ...(canSeeAllProjects(user) ? {} : { members: { some: { userId: user?.id ?? "" } } }),
+    },
     orderBy: { startDate: "asc" },
     include: {
       team: { select: { id: true, name: true, identifier: true } },
@@ -138,7 +147,12 @@ export async function getProjectsOverview(
 export async function getAllVisibleIssues(user: AuthUser): Promise<IssueView[]> {
   const teamIds = await visibleTeamIds(user);
   const issues = await prisma.issue.findMany({
-    where: { project: { teamId: { in: teamIds } } },
+    where: {
+      project: {
+        teamId: { in: teamIds },
+        ...(canSeeAllProjects(user) ? {} : { members: { some: { userId: user?.id ?? "" } } }),
+      },
+    },
     orderBy: { createdAt: "desc" },
     include: issueInclude(user?.id),
   });
@@ -149,17 +163,21 @@ export async function getVisibleTeams(user: AuthUser): Promise<TeamWithProjects[
   const teams = await prisma.team.findMany({
     orderBy: { createdAt: "asc" },
     include: {
-      projects: { orderBy: { createdAt: "desc" }, select: { id: true, name: true, teamId: true, status: true, isDraft: true } },
+      projects: {
+        orderBy: { createdAt: "desc" },
+        select: { id: true, name: true, teamId: true, status: true, isDraft: true, members: { select: { userId: true } } },
+      },
       members: { select: { userId: true } },
       lead: { select: { id: true, name: true, avatarUrl: true } },
     },
   });
 
+  const seeAllProjects = canSeeAllProjects(user);
+
   return teams
     .filter((team) => {
-      if (!user) return !team.isPrivate;
+      if (!user) return false;
       if (can(user, "view_all_teams")) return true;
-      if (!team.isPrivate) return true;
       return team.members.some((m) => m.userId === user.id);
     })
     .map((team) => ({
@@ -170,7 +188,9 @@ export async function getVisibleTeams(user: AuthUser): Promise<TeamWithProjects[
       color: team.color,
       isPrivate: team.isPrivate,
       timezone: team.timezone,
-      projects: team.projects,
+      projects: team.projects
+        .filter((p) => seeAllProjects || p.members.some((m) => m.userId === user?.id))
+        .map((p) => ({ id: p.id, name: p.name, teamId: p.teamId, status: p.status, isDraft: p.isDraft })),
       memberIds: team.members.map((m) => m.userId),
       lead: team.lead,
     }));
@@ -216,4 +236,101 @@ export async function getWorkspaceRoles() {
     orderBy: { createdAt: "asc" },
     include: { _count: { select: { users: true } } },
   });
+}
+
+export interface ProjectStatusReportRow {
+  id: string;
+  name: string;
+  status: string;
+  priority: string;
+  isDraft: boolean;
+  team: { id: string; name: string; identifier: string };
+  lead: { id: string; name: string; avatarUrl: string | null };
+  startDate: string | null;
+  targetDate: string | null;
+  total: number;
+  counts: Record<string, number>;
+  progressPct: number;
+}
+
+// Backs both report views: project progress (issues done+cancelled / total)
+// and the project-by-status breakdown table.
+export async function getProjectsStatusReport(user: AuthUser): Promise<ProjectStatusReportRow[]> {
+  const teamIds = await visibleTeamIds(user);
+  const projects = await prisma.project.findMany({
+    where: {
+      teamId: { in: teamIds },
+      ...(canSeeAllProjects(user) ? {} : { members: { some: { userId: user?.id ?? "" } } }),
+    },
+    orderBy: { name: "asc" },
+    include: {
+      team: { select: { id: true, name: true, identifier: true } },
+      lead: { select: { id: true, name: true, avatarUrl: true } },
+      issues: { select: { status: true } },
+    },
+  });
+
+  return projects.map((p) => {
+    const counts: Record<string, number> = {};
+    for (const s of ISSUE_STATUSES) counts[s] = 0;
+    for (const i of p.issues) counts[i.status] = (counts[i.status] ?? 0) + 1;
+    const total = p.issues.length;
+    const closed = (counts["Done"] ?? 0) + (counts["Cancelled"] ?? 0);
+    return {
+      id: p.id,
+      name: p.name,
+      status: p.status,
+      priority: p.priority,
+      isDraft: p.isDraft,
+      team: p.team,
+      lead: p.lead,
+      startDate: p.startDate?.toISOString() ?? null,
+      targetDate: p.targetDate?.toISOString() ?? null,
+      total,
+      counts,
+      progressPct: total > 0 ? Math.round((closed / total) * 100) : 0,
+    };
+  });
+}
+
+export interface MemberReportRow {
+  id: string;
+  name: string;
+  email: string;
+  bankId: string | null;
+  avatarUrl: string | null;
+  role: { id: string; name: string } | null;
+  teams: string[];
+  projectCount: number;
+  assignedIssueCount: number;
+  createdIssueCount: number;
+}
+
+export async function getMembersReport(): Promise<MemberReportRow[]> {
+  const users = await prisma.user.findMany({
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      bankId: true,
+      avatarUrl: true,
+      role: { select: { id: true, name: true } },
+      teamMemberships: { select: { team: { select: { identifier: true } } } },
+      _count: { select: { projectMemberships: true, assignedIssues: true, createdIssues: true } },
+    },
+  });
+
+  return users.map((u) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    bankId: u.bankId,
+    avatarUrl: u.avatarUrl,
+    role: u.role,
+    teams: u.teamMemberships.map((tm) => tm.team.identifier),
+    projectCount: u._count.projectMemberships,
+    assignedIssueCount: u._count.assignedIssues,
+    createdIssueCount: u._count.createdIssues,
+  }));
 }

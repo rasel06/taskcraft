@@ -19,11 +19,13 @@ export function TeamMembersManager({
   members,
   allUsers,
   canManage,
+  currentUserId,
 }: {
   teamId: string;
   members: Member[];
   allUsers: UserLite[];
   canManage: boolean;
+  currentUserId: string;
 }) {
   const memberIds = new Set(members.map((m) => m.userId));
   const addable = allUsers.filter((u) => !memberIds.has(u.id));
@@ -76,7 +78,7 @@ export function TeamMembersManager({
               <div className="truncate text-xs text-muted-foreground">{m.user.email}</div>
             </div>
             {m.role === "ADMIN" && <ShieldCheck className="h-3.5 w-3.5 text-primary" />}
-            {canManage && (
+            {canManage && m.userId !== currentUserId && (
               <button onClick={() => remove(m.userId)} className="text-faint-foreground hover:text-red-400">
                 <X className="h-3.5 w-3.5" />
               </button>

@@ -34,12 +34,10 @@ const SECTIONS = [
   {
     title: "Workspace",
     links: [
-      { href: "/settings/members", label: "Members" },
       { href: "/settings/roles", label: "Roles" },
       { href: "/settings/teams", label: "Teams" },
       { href: "/settings/billing", label: "Billing" },
       { href: "/settings/integrations", label: "Integrations" },
-      { href: "/settings/audit-log", label: "Audit log" },
     ],
   },
   {
@@ -51,27 +49,29 @@ const SECTIONS = [
 export function SettingsNav() {
   const pathname = usePathname();
   return (
-    <nav className="flex w-56 shrink-0 flex-col gap-4 overflow-y-auto border-r border-border p-4">
+    <nav className="flex shrink-0 gap-4 overflow-x-auto border-b border-border p-3 md:w-56 md:flex-col md:overflow-y-auto md:overflow-x-hidden md:border-b-0 md:border-r md:p-4">
       {SECTIONS.map((section) => (
-        <div key={section.title || section.links[0].href} className="flex flex-col gap-0.5">
+        <div key={section.title || section.links[0].href} className="flex shrink-0 flex-col gap-0.5">
           {section.title && (
             <span className="px-2 pb-1 text-xs font-medium text-faint-foreground">{section.title}</span>
           )}
-          {section.links.map((link) => {
-            const active = pathname === link.href;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
-                  "rounded-md px-2 py-1.5 text-sm hover:bg-muted",
-                  active ? "bg-primary-soft-bg text-primary-soft-text" : "text-muted-foreground",
-                )}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
+          <div className="flex gap-0.5 md:flex-col">
+            {section.links.map((link) => {
+              const active = pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    "whitespace-nowrap rounded-md px-2 py-1.5 text-sm hover:bg-muted",
+                    active ? "bg-primary-soft-bg text-primary-soft-text" : "text-muted-foreground",
+                  )}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       ))}
     </nav>

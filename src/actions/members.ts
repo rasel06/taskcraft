@@ -70,7 +70,7 @@ export async function createMember(input: {
     data: { name, email, bankId, fileNumber, mobile, passwordHash, roleId: input.roleId },
   });
 
-  revalidatePath("/settings/members");
+  revalidatePath("/members");
   return user;
 }
 
@@ -107,7 +107,7 @@ export async function updateMember(
     data: { name, email, bankId, fileNumber, mobile, roleId: input.roleId },
   });
 
-  revalidatePath("/settings/members");
+  revalidatePath("/members");
   revalidatePath("/", "layout");
   return user;
 }
@@ -119,7 +119,7 @@ export async function resetMemberPassword(userId: string, newPassword: string) {
   const passwordHash = await hashPassword(newPassword);
   await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
   await destroyAllSessionsForUser(userId);
-  revalidatePath("/settings/members");
+  revalidatePath("/members");
 }
 
 export async function deleteMember(userId: string) {
@@ -132,6 +132,6 @@ export async function deleteMember(userId: string) {
   }
 
   await prisma.user.delete({ where: { id: userId } });
-  revalidatePath("/settings/members");
+  revalidatePath("/members");
   revalidatePath("/", "layout");
 }

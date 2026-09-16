@@ -52,6 +52,7 @@ export default async function TeamSettingsPage({ params }: { params: Promise<{ t
               members={team.members.map((m) => ({ userId: m.userId, role: m.role, user: m.user }))}
               allUsers={allUsers}
               canManage={canManage}
+              currentUserId={user?.id ?? ""}
             />
           </section>
         </div>

@@ -18,7 +18,7 @@ async function main() {
     data: {
       name: "Admin",
       isSystem: true,
-      permissions: "manage_members,manage_roles,manage_teams,delete_issues,view_all_teams,view_audit_log",
+      permissions: "manage_members,manage_roles,manage_teams,delete_issues,view_all_teams,view_all_projects,view_audit_log",
     },
   });
   const memberRole = await prisma.workspaceRole.create({

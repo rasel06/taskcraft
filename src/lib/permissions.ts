@@ -22,7 +22,12 @@ export const PERMISSIONS = [
   {
     key: "view_all_teams",
     label: "View all teams",
-    description: "See private teams and their projects without being a member",
+    description: "See every team, public or private, without being a member",
+  },
+  {
+    key: "view_all_projects",
+    label: "View all projects",
+    description: "See every project in a visible team, not just ones you're assigned to",
   },
   {
     key: "view_audit_log",

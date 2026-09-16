@@ -131,18 +131,6 @@ export async function canAccessTeam(teamId: string, user: AuthUser) {
     return true;
   }
 
-  const team = await prisma.team.findUnique({
-    where: { id: teamId },
-  });
-
-  if (!team) {
-    return false;
-  }
-
-  if (!team.isPrivate) {
-    return true;
-  }
-
   return isTeamMember(teamId, user.id);
 }
 
@@ -175,26 +163,11 @@ export async function canAccessProject(projectId: string, user: AuthUser) {
     return false;
   }
 
-  if (can(user, "view_all_teams")) {
+  if (can(user, "view_all_teams") || can(user, "view_all_projects")) {
     return true;
   }
 
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-    include: {
-      team: true,
-    },
-  });
-
-  if (!project) {
-    return false;
-  }
-
-  if (!project.team.isPrivate) {
-    return true;
-  }
-
-  return isTeamMember(project.teamId, user.id);
+  return isProjectMember(projectId, user.id);
 }
 
 export async function isProjectMember(projectId: string, userId: string) {

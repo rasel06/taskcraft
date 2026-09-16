@@ -147,6 +147,7 @@ export async function addTeamMember(teamId: string, userId: string) {
 export async function removeTeamMember(teamId: string, userId: string) {
   await requireTeamManage(teamId);
   const actor = await getCurrentUser();
+  if (actor?.id === userId) throw new Error("You can't remove yourself from a team.");
   const team = await prisma.team.findUnique({ where: { id: teamId }, select: { leadId: true, name: true } });
   if (team?.leadId === userId) throw new Error("Can't remove the team lead. Assign a new lead first.");
 

@@ -50,6 +50,7 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
               allUsers={await getAllUsers()}
               leadId={project.leadId}
               canManage={canManage}
+              currentUserId={user?.id ?? ""}
             />
           </section>
         </div>

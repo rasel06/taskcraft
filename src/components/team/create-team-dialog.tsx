@@ -245,9 +245,7 @@ export function CreateTeamDialog({
                 <div>
                   <div className="text-sm text-foreground">{isPrivate ? "Private team" : "Public team"}</div>
                   <div className="text-xs text-muted-foreground">
-                    {isPrivate
-                      ? "Private team - visible only to members and workspace admins"
-                      : "Visible to everyone in the workspace"}
+                    Only members and roles with &quot;View all teams&quot; permission can access this team
                   </div>
                 </div>
               </div>

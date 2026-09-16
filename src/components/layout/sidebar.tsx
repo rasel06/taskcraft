@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Inbox, ListChecks, LayoutGrid, Map, UserPlus, GitBranch, Plus, FolderKanban, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Inbox, ListChecks, LayoutGrid, Map, BarChart3, Plus, FolderKanban, PanelLeftClose, PanelLeftOpen, Menu, Users, ScrollText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SearchModal } from "@/components/search/search-modal";
 import { TeamNavItem } from "@/components/layout/team-nav-item";
@@ -22,6 +22,7 @@ const CORE_LINKS = [
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/views", label: "Views", icon: LayoutGrid },
   { href: "/roadmaps", label: "Roadmaps", icon: Map },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
 ];
 
 const COLLAPSE_KEY = "taskcraft.sidebar.collapsed";
@@ -30,13 +31,22 @@ export function Sidebar({
   currentUser,
   users,
   teams,
+  permissions,
 }: {
   currentUser: UserLite | null;
   users: UserLite[];
   teams: TeamWithProjects[];
+  permissions?: { canManageMembers: boolean; canViewAuditLog: boolean };
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = React.useState(false);
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [lastPathname, setLastPathname] = React.useState(pathname);
+
+  if (pathname !== lastPathname) {
+    setLastPathname(pathname);
+    setMobileOpen(false);
+  }
 
   React.useEffect(() => {
     try {
@@ -62,11 +72,31 @@ export function Sidebar({
     t.projects.map((p) => ({ ...p, teamIdentifier: t.identifier })),
   );
 
+  const manageLinks = [
+    permissions?.canManageMembers && { href: "/members", label: "Members", icon: Users },
+    permissions?.canViewAuditLog && { href: "/audit-log", label: "Audit Log", icon: ScrollText },
+  ].filter((l): l is { href: string; label: string; icon: typeof Users } => Boolean(l));
+
   return (
-    <aside
+    <>
+      <button
+        onClick={() => setMobileOpen(true)}
+        title="Open menu"
+        className="fixed left-2 top-2 z-30 flex h-8 w-8 items-center justify-center rounded-md border border-border bg-background text-muted-foreground shadow-sm print:hidden md:hidden"
+      >
+        <Menu className="h-4 w-4" />
+      </button>
+      {mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+        />
+      )}
+      <aside
       className={cn(
-        "flex h-full shrink-0 flex-col border-r border-border bg-background transition-[width] duration-150",
-        collapsed ? "w-14" : "w-64",
+        "fixed inset-y-0 left-0 z-50 flex h-full w-64 shrink-0 -translate-x-full flex-col border-r border-border bg-background transition-transform duration-150 print:hidden md:static md:z-auto md:translate-x-0 md:transition-[width]",
+        mobileOpen && "translate-x-0",
+        collapsed && "md:w-14",
       )}
     >
       <div className={cn("flex items-center gap-2 px-3 pt-3", collapsed && "flex-col gap-1.5 px-2")}>
@@ -146,6 +176,30 @@ export function Sidebar({
         })}
       </nav>
 
+      {manageLinks.length > 0 && (
+        <nav className={cn("flex flex-col gap-0.5 px-3 pt-2", collapsed && "px-2")}>
+          {manageLinks.map((link) => {
+            const active = pathname === link.href;
+            const Icon = link.icon;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                title={collapsed ? link.label : undefined}
+                className={cn(
+                  "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted",
+                  collapsed && "justify-center px-0",
+                  active ? "bg-primary-soft-bg text-primary-soft-text" : "text-muted-foreground",
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {!collapsed && link.label}
+              </Link>
+            );
+          })}
+        </nav>
+      )}
+
       {collapsed ? (
         <div className="mx-2 mt-4 border-t border-border" />
       ) : (
@@ -169,38 +223,13 @@ export function Sidebar({
         ))}
       </div>
 
-      <div className={cn("flex flex-col gap-0.5 border-t border-border px-3 py-2", collapsed && "items-center px-2")}>
-        {!collapsed && <span className="px-2 pb-1 text-xs font-medium text-faint-foreground">Administration</span>}
-        <Link
-          href="/settings/members"
-          title={collapsed ? "Invite people" : undefined}
-          className={cn(
-            "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted",
-            collapsed && "justify-center px-0",
-          )}
-        >
-          <UserPlus className="h-4 w-4 shrink-0" />
-          {!collapsed && "Invite people"}
-        </Link>
-        <Link
-          href="/settings/integrations"
-          title={collapsed ? "Connect GitHub" : undefined}
-          className={cn(
-            "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted",
-            collapsed && "justify-center px-0",
-          )}
-        >
-          <GitBranch className="h-4 w-4 shrink-0" />
-          {!collapsed && "Connect GitHub"}
-        </Link>
-      </div>
-
       <div className={cn("flex items-center gap-2 border-t border-border px-2 py-2", collapsed && "flex-col gap-1.5")}>
         <div className={cn("min-w-0 flex-1", collapsed && "flex-none")}>
           <AccountMenu currentUser={currentUser} collapsed={collapsed} />
         </div>
         {!collapsed && <ThemeToggle />}
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
