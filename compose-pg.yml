@@ -1,0 +1,38 @@
+services:
+  taskcraft_pg:
+    image: postgres:16
+    container_name: task_craft_postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-taskcraft}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-task_craft_db}
+      PGDATA: /var/lib/postgresql/data/pgdata
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    ports:
+      - "5484:5432"
+
+    networks:
+      - finx-network
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-taskcraft} -d ${POSTGRES_DB:-task_craft_db}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    name: taskcraft_postgres_data
+
+networks:
+  finx-network:
+    external: true
