@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Lock, Globe2 } from "lucide-react";
+import { Lock, Globe2, UserCheck } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { getVisibleTeams, getAllUsers } from "@/lib/data";
 import { CreateTeamDialog } from "@/components/team/create-team-dialog";
@@ -36,6 +36,11 @@ export default async function TeamsSettingsPage() {
             >
               <TeamIconBadge icon={t.icon} color={t.color} className="h-6 w-6" iconClassName="h-3.5 w-3.5" />
               <span className="flex-1 text-sm text-foreground">{t.name}</span>
+              {user && t.memberIds.includes(user.id) && (
+                <span title="Your team">
+                  <UserCheck className="h-3.5 w-3.5 text-primary" />
+                </span>
+              )}
               {t.lead && <span className="text-xs text-muted-foreground">Lead: {t.lead.name}</span>}
               <span className="text-xs text-muted-foreground">{t.projects.length} projects</span>
               {t.isPrivate ? (

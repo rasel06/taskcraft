@@ -219,7 +219,7 @@ export function Sidebar({
       )}
       <div className={cn("flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-1.5", collapsed && "items-center px-2")}>
         {teams.map((team) => (
-          <TeamNavItem key={team.id} team={team} collapsed={collapsed} />
+          <TeamNavItem key={team.id} team={team} collapsed={collapsed} currentUserId={currentUser?.id} />
         ))}
       </div>
 

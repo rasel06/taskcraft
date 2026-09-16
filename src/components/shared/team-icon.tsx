@@ -71,7 +71,7 @@ export const TEAM_ICON_MAP: Record<string, LucideIcon> = {
   Router,
 };
 
-const TEAM_TEXT_CLASS: Record<string, string> = {
+export const TEAM_TEXT_CLASS: Record<string, string> = {
   slate: "text-slate-600 dark:text-slate-400",
   red: "text-red-600 dark:text-red-400",
   orange: "text-orange-600 dark:text-orange-400",
@@ -100,6 +100,11 @@ const TEAM_BG_CLASS: Record<string, string> = {
   purple: "bg-purple-100 dark:bg-purple-950",
   pink: "bg-pink-100 dark:bg-pink-950",
 };
+
+export function teamTextClass(color?: string) {
+  const colorKey = color && TEAM_COLORS.some((c) => c.key === color) ? color : "indigo";
+  return TEAM_TEXT_CLASS[colorKey];
+}
 
 export function TeamIcon({ icon, color, className }: { icon: string; color?: string; className?: string }) {
   const Icon = TEAM_ICON_MAP[icon] ?? Layers;

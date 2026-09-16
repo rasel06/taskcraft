@@ -3,9 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Lock, ListTree, RefreshCw, Map, Settings, Circle } from "lucide-react";
+import { ChevronRight, Lock, ListTree, RefreshCw, Map, Settings, Circle, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TeamIconBadge } from "@/components/shared/team-icon";
+import { TeamIconBadge, teamTextClass } from "@/components/shared/team-icon";
 import type { TeamWithProjects } from "@/lib/types";
 
 const SUBLINKS = [
@@ -15,10 +15,20 @@ const SUBLINKS = [
   { key: "settings", label: "Settings", icon: Settings },
 ];
 
-export function TeamNavItem({ team, collapsed }: { team: TeamWithProjects; collapsed?: boolean }) {
+export function TeamNavItem({
+  team,
+  collapsed,
+  currentUserId,
+}: {
+  team: TeamWithProjects;
+  collapsed?: boolean;
+  currentUserId?: string;
+}) {
   const pathname = usePathname();
   const isActive = pathname.startsWith(`/teams/${team.id}`);
   const [open, setOpen] = React.useState(isActive);
+  const isMember = !!currentUserId && team.memberIds.includes(currentUserId);
+  const iconColorClass = teamTextClass(team.color);
 
   React.useEffect(() => {
     if (!isActive) return;
@@ -30,13 +40,16 @@ export function TeamNavItem({ team, collapsed }: { team: TeamWithProjects; colla
     return (
       <Link
         href={`/teams/${team.id}/issues`}
-        title={team.name}
+        title={isMember ? `${team.name} (your team)` : team.name}
         className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted",
+          "relative flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted",
           isActive && "bg-muted",
         )}
       >
         <TeamIconBadge icon={team.icon} color={team.color} className="h-5 w-5" iconClassName="h-3 w-3" />
+        {isMember && (
+          <UserCheck className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-background text-primary ring-1 ring-background" />
+        )}
       </Link>
     );
   }
@@ -53,7 +66,14 @@ export function TeamNavItem({ team, collapsed }: { team: TeamWithProjects; colla
         <ChevronRight className={cn("h-3.5 w-3.5 shrink-0 text-faint-foreground transition-transform", open && "rotate-90")} />
         <TeamIconBadge icon={team.icon} color={team.color} className="h-4 w-4 shrink-0" iconClassName="h-2.5 w-2.5" />
         <span className="truncate">{team.name}</span>
-        {team.isPrivate && <Lock className="ml-auto h-3 w-3 shrink-0 text-faint-foreground" />}
+        <span className="ml-auto flex shrink-0 items-center gap-1.5">
+          {isMember && (
+            <span title="Your team">
+              <UserCheck className="h-3 w-3 text-primary" />
+            </span>
+          )}
+          {team.isPrivate && <Lock className="h-3 w-3 text-faint-foreground" />}
+        </span>
       </button>
       {open && (
         <div className="ml-3.5 flex flex-col gap-0.5 border-l border-border pl-3">
@@ -70,7 +90,7 @@ export function TeamNavItem({ team, collapsed }: { team: TeamWithProjects; colla
                   active ? "bg-muted text-foreground" : "text-muted-foreground",
                 )}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className={cn("h-3.5 w-3.5", iconColorClass)} />
                 {link.label}
               </Link>
             );
@@ -89,7 +109,7 @@ export function TeamNavItem({ team, collapsed }: { team: TeamWithProjects; colla
                       active ? "bg-muted text-foreground" : "text-muted-foreground",
                     )}
                   >
-                    <Circle className="h-2.5 w-2.5 shrink-0" />
+                    <Circle className={cn("h-2.5 w-2.5 shrink-0", iconColorClass)} />
                     <span className="truncate">{p.name}</span>
                     {p.isDraft && <span className="ml-auto text-[10px] text-faint-foreground">draft</span>}
                   </Link>
