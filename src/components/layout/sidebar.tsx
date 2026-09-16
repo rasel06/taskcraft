@@ -156,7 +156,7 @@ export function Sidebar({
 
       <nav className={cn("flex flex-col gap-0.5 px-3 pt-3", collapsed && "px-2")}>
         {CORE_LINKS.map((link) => {
-          const active = pathname === link.href;
+          const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
           const Icon = link.icon;
           return (
             <Link
@@ -179,7 +179,7 @@ export function Sidebar({
       {manageLinks.length > 0 && (
         <nav className={cn("flex flex-col gap-0.5 px-3 pt-2", collapsed && "px-2")}>
           {manageLinks.map((link) => {
-            const active = pathname === link.href;
+            const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
             const Icon = link.icon;
             return (
               <Link
