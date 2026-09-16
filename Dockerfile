@@ -1,42 +1,52 @@
-# ---------- 1. Install dependencies ----------
+# ============================================================
+# 1. Dependencies
+# ============================================================
 FROM node:20-alpine AS deps
+
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm install
 
-# ---------- 2. Build ----------
+RUN npm ci
+
+
+# ============================================================
+# 2. Build
+# ============================================================
 FROM node:20-alpine AS builder
+
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Generate Prisma client
 RUN npx prisma generate
 
-# Accept and set at build time
-ARG NEXT_PUBLIC_BASE_URL
-ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
-
+# Build Next.js
 RUN npm run build
 
-RUN npm run telegram:bot
 
-# ---------- 3. Production image ----------
+# ============================================================
+# 3. Production
+# ============================================================
 FROM node:20-alpine AS runner
+
 WORKDIR /app
 
-ENV USE_HTTPS=false
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
-# Copy only required files
+
+# Next.js standalone application
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-
+# Telegram bot
+COPY --from=builder /app/scripts ./scripts
 
 EXPOSE 3000
 
+# Default command = Next.js application
 CMD ["node", "server.js"]
