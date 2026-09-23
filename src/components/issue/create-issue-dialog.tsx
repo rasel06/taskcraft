@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Paperclip, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +22,9 @@ import { PriorityIcon } from "@/components/shared/priority-icon";
 import { StatusIcon } from "@/components/shared/status-icon";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { createIssue } from "@/actions/issues";
-import { ISSUE_STATUSES, PRIORITIES } from "@/lib/constants";
+import { AttachmentGrid, AttachmentPickerButton, uploadStagedFiles, useStagedFiles } from "@/components/issue/issue-attachments";
+import { PRIORITIES } from "@/lib/constants";
+import { useIssueStatuses, defaultIssueStatusName } from "@/components/shared/issue-statuses-context";
 import type { ProjectLite, UserLite } from "@/lib/types";
 
 export function CreateIssueDialog({
@@ -42,29 +44,30 @@ export function CreateIssueDialog({
 
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
-  const [status, setStatus] = React.useState<string>(ISSUE_STATUSES[0]);
+  const { statuses } = useIssueStatuses();
+  const [status, setStatus] = React.useState<string>(() => defaultIssueStatusName(statuses));
   const [priority, setPriority] = React.useState<string>(PRIORITIES[0]);
   const [assigneeIds, setAssigneeIds] = React.useState<string[]>([]);
   const [projectId, setProjectId] = React.useState<string>(defaultProjectId ?? "");
   const [labelInput, setLabelInput] = React.useState("");
   const [labels, setLabels] = React.useState<string[]>([]);
-  const [attachments, setAttachments] = React.useState<string[]>([]);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { staged: stagedFiles, add: addFiles, remove: removeFile, clear: clearFiles } = useStagedFiles();
+  const [uploading, setUploading] = React.useState(false);
   const titleRef = React.useRef<HTMLInputElement>(null);
 
   function resetFields() {
     setTitle("");
     setDescription("");
     setLabelInput("");
+    clearFiles();
   }
 
   function resetAll() {
     resetFields();
-    setStatus(ISSUE_STATUSES[0]);
+    setStatus(defaultIssueStatusName(statuses));
     setPriority(PRIORITIES[0]);
     setAssigneeIds([]);
     setLabels([]);
-    setAttachments([]);
     setProjectId(defaultProjectId ?? "");
   }
 
@@ -83,6 +86,13 @@ export function CreateIssueDialog({
     }
     setPending(true);
     try {
+      // Files are only uploaded now, when the user presses "Create issue".
+      let attachments: Awaited<ReturnType<typeof uploadStagedFiles>> = [];
+      if (stagedFiles.length > 0) {
+        setUploading(true);
+        attachments = await uploadStagedFiles(projectId, stagedFiles);
+        setUploading(false);
+      }
       const issue = await createIssue({
         title,
         description,
@@ -104,6 +114,7 @@ export function CreateIssueDialog({
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to create issue");
     } finally {
+      setUploading(false);
       setPending(false);
     }
   }
@@ -170,9 +181,9 @@ export function CreateIssueDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ISSUE_STATUSES.map((s) => (
-                      <SelectItem key={s} value={s} icon={<StatusIcon status={s} />}>
-                        {s}
+                    {statuses.map((s) => (
+                      <SelectItem key={s.id} value={s.name} icon={<StatusIcon status={s.name} />}>
+                        {s.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -262,48 +273,20 @@ export function CreateIssueDialog({
               </div>
             </section>
 
-            {attachments.length > 0 && (
+            {stagedFiles.length > 0 && (
               <section className="flex flex-col gap-2 border-t border-border pt-4">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Attachments</h3>
-                <div className="flex flex-wrap gap-1.5">
-                  {attachments.map((a) => (
-                    <Badge key={a} variant="outline">
-                      {a}
-                      <button
-                        type="button"
-                        onClick={() => setAttachments(attachments.filter((x) => x !== a))}
-                        className="ml-0.5 hover:text-white"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Attachments <span className="font-normal normal-case text-faint-foreground">({stagedFiles.length})</span>
+                </h3>
+                <AttachmentGrid staged={stagedFiles} onRemoveStaged={removeFile} disabled={pending} />
+                <p className="text-[11px] text-faint-foreground">Files are uploaded when you press Create issue.</p>
               </section>
             )}
           </div>
 
           <DialogFooter className="shrink-0">
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                title="Attach files"
-              >
-                <Paperclip className="h-4 w-4" />
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                  const files = Array.from(e.target.files ?? []);
-                  setAttachments([...attachments, ...files.map((f) => f.name)]);
-                  e.target.value = "";
-                }}
-              />
+              <AttachmentPickerButton onPick={addFiles} disabled={pending} label={stagedFiles.length ? String(stagedFiles.length) : undefined} />
               <div className="flex items-center gap-2">
                 <Switch checked={createMore} onCheckedChange={setCreateMore} id="create-more" />
                 <Label htmlFor="create-more" className="cursor-pointer">
@@ -313,7 +296,7 @@ export function CreateIssueDialog({
             </div>
             <Button type="submit" variant="primary" disabled={pending}>
               <Plus className="h-4 w-4" />
-              {pending ? "Creating..." : "Create issue"}
+              {uploading ? "Uploading..." : pending ? "Creating..." : "Create issue"}
             </Button>
           </DialogFooter>
         </form>

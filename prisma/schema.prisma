@@ -153,6 +153,34 @@ model Project {
   @@unique([teamId, name])
 }
 
+// Workspace-wide project status lifecycle, managed at Settings > Projects >
+// Statuses. Project.status stores the status *name*, so renames are cascaded
+// to projects by the server action rather than through a relation.
+model ProjectStatus {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#71717a")
+  // backlog | planned | started | completed | canceled - drives the icon shape.
+  category  String   @default("planned")
+  position  Int      @default(0)
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Workspace-wide issue workflow (board columns), managed from the board's
+// column headers or Settings > Issues > Statuses. Issue.status stores the name.
+model IssueStatus {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#71717a")
+  category  String   @default("planned")
+  position  Int      @default(0)
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model ProjectMember {
   id        String   @id @default(cuid())
   projectId String

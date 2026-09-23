@@ -3,9 +3,10 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trash2, MessageCircle, History, ArrowLeft } from "lucide-react";
+import { Trash2, MessageCircle, History, ArrowLeft, Save } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import {
   DropdownMenu,
@@ -20,9 +21,18 @@ import { AssigneeAvatars } from "@/components/shared/assignee-avatars";
 import { TeamIconBadge } from "@/components/shared/team-icon";
 import { updateIssue, deleteIssue } from "@/actions/issues";
 import { markIssueViewed } from "@/actions/comments";
-import { ISSUE_STATUSES, PRIORITIES } from "@/lib/constants";
+import { PRIORITIES } from "@/lib/constants";
+import { useIssueStatuses } from "@/components/shared/issue-statuses-context";
 import { formatDate } from "@/lib/utils";
 import { IssueDiscussion, type IssueCommentEntry } from "@/components/issue/issue-discussion";
+import {
+  AttachmentGrid,
+  AttachmentPickerButton,
+  AttachmentPreviewDialog,
+  uploadStagedFiles,
+  useStagedFiles,
+} from "@/components/issue/issue-attachments";
+import type { IssueAttachment } from "@/lib/attachments";
 import type { UserLite } from "@/lib/types";
 
 export interface IssueActivityEntry {
@@ -38,11 +48,13 @@ export type { IssueCommentEntry };
 
 export interface IssueDetail {
   id: string;
+  projectId: string;
   title: string;
   description: string | null;
   status: string;
   priority: string;
   labels: string;
+  attachments: IssueAttachment[];
   createdAt: string;
   assigneeIds: string[];
   team: { name: string; icon: string; color: string };
@@ -60,6 +72,7 @@ const FIELD_LABELS: Record<string, string> = {
   milestoneId: "Milestone",
   cycleId: "Cycle",
   labels: "Labels",
+  attachments: "Attachments",
 };
 
 function formatActivityValue(field: string, value: string | null, users: UserLite[]): string {
@@ -118,6 +131,11 @@ export function IssueDetailModal({
   const router = useRouter();
   const [open, setOpen] = React.useState(true);
   const [description, setDescription] = React.useState(issue.description ?? "");
+  const [removedUrls, setRemovedUrls] = React.useState<Set<string>>(new Set());
+  const { staged: stagedFiles, add: addFiles, remove: removeFile, clear: clearFiles } = useStagedFiles();
+  const [saving, setSaving] = React.useState(false);
+  const { statuses } = useIssueStatuses();
+  const [previewIndex, setPreviewIndex] = React.useState<number | null>(null);
   const [view, setView] = React.useState<"detail" | "discussion" | "activity">(initialView);
   const labels = issue.labels ? issue.labels.split(",").filter(Boolean) : [];
   const comments = issue.comments ?? [];
@@ -128,14 +146,52 @@ export function IssueDetailModal({
   }, [issue.id]);
 
   function close() {
+    if (dirty && !window.confirm("You have unsaved changes. Discard them?")) return;
     setOpen(false);
     router.back();
   }
 
-  async function saveDescription() {
-    if (description === (issue.description ?? "")) return;
-    await updateIssue(issue.id, { description });
-    router.refresh();
+  const descriptionDirty = description !== (issue.description ?? "");
+  const attachmentsDirty = removedUrls.size > 0 || stagedFiles.length > 0;
+  const dirty = descriptionDirty || attachmentsDirty;
+
+  function discardChanges() {
+    setDescription(issue.description ?? "");
+    setRemovedUrls(new Set());
+    clearFiles();
+  }
+
+  // Description and attachment edits are staged locally and only persisted
+  // when the user presses "Save changes".
+  async function saveChanges() {
+    if (!dirty || saving) return;
+    setSaving(true);
+    try {
+      const input: Parameters<typeof updateIssue>[1] = {};
+      if (descriptionDirty) input.description = description;
+      if (attachmentsDirty) {
+        const uploaded = await uploadStagedFiles(issue.projectId, stagedFiles);
+        input.attachments = [...issue.attachments.filter((a) => !removedUrls.has(a.url)), ...uploaded];
+      }
+      await updateIssue(issue.id, input);
+      setRemovedUrls(new Set());
+      clearFiles();
+      toast.success("Changes saved");
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save changes");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function toggleRemoved(url: string, removed: boolean) {
+    setRemovedUrls((prev) => {
+      const next = new Set(prev);
+      if (removed) next.add(url);
+      else next.delete(url);
+      return next;
+    });
   }
 
   async function handleDelete() {
@@ -200,11 +256,51 @@ export function IssueDetailModal({
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  onBlur={saveDescription}
+                  disabled={saving}
                   placeholder="Add a description..."
                   className="min-h-24 rounded-md border border-border bg-muted/10 px-3 py-2 text-sm focus-visible:ring-1 focus-visible:ring-ring"
                 />
               </section>
+
+              <section className="flex flex-col gap-2 border-t border-border pt-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Attachments{" "}
+                    <span className="font-normal normal-case text-faint-foreground">
+                      ({issue.attachments.length - removedUrls.size + stagedFiles.length})
+                    </span>
+                  </h3>
+                  <AttachmentPickerButton onPick={addFiles} disabled={saving} label="Add files" />
+                </div>
+                {issue.attachments.length === 0 && stagedFiles.length === 0 ? (
+                  <p className="text-xs text-faint-foreground">No attachments yet.</p>
+                ) : (
+                  <AttachmentGrid
+                    saved={issue.attachments}
+                    removedUrls={removedUrls}
+                    staged={stagedFiles}
+                    onRemoveSaved={(url) => toggleRemoved(url, true)}
+                    onRestoreSaved={(url) => toggleRemoved(url, false)}
+                    onRemoveStaged={removeFile}
+                    onPreviewSaved={setPreviewIndex}
+                    disabled={saving}
+                  />
+                )}
+                <AttachmentPreviewDialog attachments={issue.attachments} index={previewIndex} onIndexChange={setPreviewIndex} />
+              </section>
+
+              {dirty && (
+                <div className="flex items-center justify-end gap-2 rounded-md border border-primary-soft-border bg-primary-soft-bg px-3 py-2">
+                  <span className="mr-auto text-xs text-primary-soft-text">You have unsaved changes</span>
+                  <Button type="button" variant="ghost" size="sm" onClick={discardChanges} disabled={saving}>
+                    Discard
+                  </Button>
+                  <Button type="button" variant="primary" size="sm" onClick={saveChanges} disabled={saving}>
+                    <Save className="h-3.5 w-3.5" />
+                    {saving ? "Saving..." : "Save changes"}
+                  </Button>
+                </div>
+              )}
 
               <section className="flex flex-col gap-2 border-t border-border pt-4">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Properties</h3>
@@ -212,8 +308,12 @@ export function IssueDetailModal({
                   <Select
                     value={issue.status}
                     onValueChange={async (v) => {
-                      await updateIssue(issue.id, { status: v });
-                      router.refresh();
+                      try {
+                        await updateIssue(issue.id, { status: v });
+                        router.refresh();
+                      } catch (err) {
+                        toast.error(err instanceof Error ? err.message : "Failed to update status");
+                      }
                     }}
                   >
                     <SelectTrigger className="h-8 w-auto gap-1.5 rounded-md border border-border bg-muted/30 text-xs">
@@ -221,11 +321,17 @@ export function IssueDetailModal({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {ISSUE_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s} icon={<StatusIcon status={s} />}>
-                          {s}
+                      {statuses.map((s) => (
+                        <SelectItem key={s.id} value={s.name} icon={<StatusIcon status={s.name} />}>
+                          {s.name}
                         </SelectItem>
                       ))}
+                      {/* Keep the current status selectable if it was removed from the workflow. */}
+                      {!statuses.some((s) => s.name === issue.status) && (
+                        <SelectItem value={issue.status} icon={<StatusIcon status={issue.status} />}>
+                          {issue.status}
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
 

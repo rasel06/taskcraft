@@ -1,27 +1,24 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { PriorityIcon } from "@/components/shared/priority-icon";
 import { updateProject } from "@/actions/projects";
-import { PROJECT_STATUSES, PRIORITIES } from "@/lib/constants";
-
-const STATUS_DOT: Record<string, string> = {
-  Backlog: "bg-zinc-600",
-  Planned: "bg-zinc-400",
-  Active: "bg-indigo-500",
-  Completed: "bg-emerald-500",
-  Cancelled: "bg-red-700",
-};
+import { PRIORITIES } from "@/lib/constants";
+import { ProjectStatusIcon } from "@/components/shared/project-status-icon";
+import type { ProjectStatusDef } from "@/lib/project-status";
 
 export function ProjectHeaderControls({
   projectId,
   status,
   priority,
+  statuses,
 }: {
   projectId: string;
   status: string;
   priority: string;
+  statuses: ProjectStatusDef[];
 }) {
   const router = useRouter();
 
@@ -30,20 +27,30 @@ export function ProjectHeaderControls({
       <Select
         value={status}
         onValueChange={async (v) => {
-          await updateProject(projectId, { status: v });
-          router.refresh();
+          try {
+            await updateProject(projectId, { status: v });
+            router.refresh();
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Failed to update status");
+          }
         }}
       >
         <SelectTrigger className="h-7 w-auto gap-1.5 text-xs">
-          <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status] ?? "bg-zinc-600"}`} />
+          <ProjectStatusIcon status={status} statuses={statuses} />
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {PROJECT_STATUSES.map((s) => (
-            <SelectItem key={s} value={s}>
-              {s}
+          {statuses.map((s) => (
+            <SelectItem key={s.id} value={s.name} icon={<ProjectStatusIcon status={s} />}>
+              {s.name}
             </SelectItem>
           ))}
+          {/* Keep a project's current status selectable even if it was removed from settings. */}
+          {!statuses.some((s) => s.name === status) && (
+            <SelectItem value={status} icon={<ProjectStatusIcon status={status} />}>
+              {status}
+            </SelectItem>
+          )}
         </SelectContent>
       </Select>
 

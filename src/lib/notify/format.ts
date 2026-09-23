@@ -21,6 +21,7 @@ const ISSUE_FIELD_LABELS: Record<string, string> = {
   milestoneId: "Milestone",
   cycleId: "Cycle",
   labels: "Labels",
+  attachments: "Attachments",
 };
 
 const PROJECT_FIELD_LABELS: Record<string, string> = {

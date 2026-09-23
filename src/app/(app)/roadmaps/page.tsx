@@ -1,11 +1,11 @@
 import { getCurrentUser } from "@/lib/auth";
-import { getProjectsOverview } from "@/lib/data";
+import { getProjectsOverview, getProjectStatuses } from "@/lib/data";
 import { RoadmapTimeline } from "@/components/project/roadmap-timeline";
 import { Map } from "lucide-react";
 
 export default async function RoadmapsPage() {
   const user = await getCurrentUser();
-  const projects = await getProjectsOverview(user);
+  const [projects, statuses] = await Promise.all([getProjectsOverview(user), getProjectStatuses()]);
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -19,7 +19,7 @@ export default async function RoadmapsPage() {
           <p className="text-sm">No published projects yet</p>
         </div>
       ) : (
-        <RoadmapTimeline projects={projects} />
+        <RoadmapTimeline projects={projects} statuses={statuses} />
       )}
     </div>
   );

@@ -1,3 +1,5 @@
+import type { IssueAttachment } from "@/lib/attachments";
+
 export interface IssueView {
   id: string;
   title: string;
@@ -11,6 +13,7 @@ export interface IssueView {
   milestoneName: string | null;
   cycleId: string | null;
   assignees: { id: string; name: string; avatarUrl: string | null }[];
+  attachments: IssueAttachment[];
   commentCount: number;
   hasNewDiscussion: boolean;
 }

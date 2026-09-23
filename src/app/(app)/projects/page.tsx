@@ -1,16 +1,17 @@
 import { FolderKanban, Plus } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
-import { getProjectsOverview, getVisibleTeams, getAllUsers } from "@/lib/data";
+import { getProjectsOverview, getVisibleTeams, getAllUsers, getProjectStatuses } from "@/lib/data";
 import { ProjectList } from "@/components/project/project-list";
 import { CreateProjectDrawer } from "@/components/project/create-project-drawer";
 import { Button } from "@/components/ui/button";
 
 export default async function ProjectsPage() {
   const user = await getCurrentUser();
-  const [projects, teams, users] = await Promise.all([
+  const [projects, teams, users, statuses] = await Promise.all([
     getProjectsOverview(user),
     getVisibleTeams(user),
     getAllUsers(),
+    getProjectStatuses(),
   ]);
 
   return (
@@ -36,7 +37,7 @@ export default async function ProjectsPage() {
           <p className="text-sm">No published projects yet</p>
         </div>
       ) : (
-        <ProjectList projects={projects} />
+        <ProjectList projects={projects} statuses={statuses} />
       )}
     </div>
   );

@@ -14,21 +14,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { StatusIcon } from "@/components/shared/status-icon";
+import { ProjectStatusIcon } from "@/components/shared/project-status-icon";
 import { UserAvatar } from "@/components/shared/user-avatar";
-import { PROJECT_STATUSES } from "@/lib/constants";
+import type { ProjectStatusDef } from "@/lib/project-status";
 import { formatDate } from "@/lib/utils";
 import type { ProjectOverview } from "@/lib/types";
 
-const STATUS_COLOR: Record<string, string> = {
-  Backlog: "bg-zinc-700",
-  Planned: "bg-zinc-500",
-  Active: "bg-indigo-500",
-  Completed: "bg-emerald-500",
-  Cancelled: "bg-red-900",
-};
-
-export function RoadmapTimeline({ projects }: { projects: ProjectOverview[] }) {
+export function RoadmapTimeline({ projects, statuses }: { projects: ProjectOverview[]; statuses: ProjectStatusDef[] }) {
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string[]>([]);
   const [teamFilter, setTeamFilter] = React.useState<string[]>([]);
@@ -86,7 +78,7 @@ export function RoadmapTimeline({ projects }: { projects: ProjectOverview[] }) {
             <DropdownMenuContent align="start">
               <DropdownMenuLabel>Status</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {PROJECT_STATUSES.map((s) => (
+              {statuses.map(({ name: s }) => (
                 <DropdownMenuCheckboxItem
                   key={s}
                   checked={statusFilter.includes(s)}
@@ -94,7 +86,7 @@ export function RoadmapTimeline({ projects }: { projects: ProjectOverview[] }) {
                   onSelect={(e) => e.preventDefault()}
                 >
                   <span className="flex items-center gap-2">
-                    <StatusIcon status={s} /> {s}
+                    <ProjectStatusIcon status={s} statuses={statuses} /> {s}
                   </span>
                 </DropdownMenuCheckboxItem>
               ))}
@@ -123,7 +115,7 @@ export function RoadmapTimeline({ projects }: { projects: ProjectOverview[] }) {
           <div className="flex flex-wrap items-center gap-1.5">
             {statusFilter.map((s) => (
               <Badge key={s} variant="indigo" className="gap-1">
-                <StatusIcon status={s} /> {s}
+                <ProjectStatusIcon status={s} statuses={statuses} /> {s}
                 <button onClick={() => toggle(statusFilter, setStatusFilter, s)} className="ml-0.5 hover:text-white">
                   <X className="h-3 w-3" />
                 </button>
@@ -186,9 +178,13 @@ export function RoadmapTimeline({ projects }: { projects: ProjectOverview[] }) {
                 <div className="relative h-6 rounded bg-muted/60">
                   {hasRange ? (
                     <div
-                      className={`absolute top-0.5 h-5 rounded ${STATUS_COLOR[p.status] ?? "bg-zinc-600"}`}
-                      style={{ left: `${left}%`, width: `${width}%` }}
-                      title={`${formatDate(p.startDate)} - ${formatDate(p.targetDate)}`}
+                      className="absolute top-0.5 h-5 rounded"
+                      style={{
+                        left: `${left}%`,
+                        width: `${width}%`,
+                        backgroundColor: statuses.find((s) => s.name === p.status)?.color ?? "#52525b",
+                      }}
+                      title={`${p.status} · ${formatDate(p.startDate)} - ${formatDate(p.targetDate)}`}
                     />
                   ) : (
                     <span className="absolute left-2 top-1 text-xs text-faint-foreground">No timeline set</span>

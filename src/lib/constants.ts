@@ -1,9 +1,3 @@
-export const ISSUE_STATUSES = ["Backlog", "Todo", "In Progress", "Done", "Cancelled"] as const;
-export type IssueStatus = (typeof ISSUE_STATUSES)[number];
-
-export const PROJECT_STATUSES = ["Backlog", "Planned", "Active", "Completed", "Cancelled"] as const;
-export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
-
 export const PRIORITIES = ["No priority", "Low", "Medium", "High", "Urgent"] as const;
 export type Priority = (typeof PRIORITIES)[number];
 

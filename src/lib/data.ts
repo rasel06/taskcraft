@@ -1,6 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/permissions";
-import { ISSUE_STATUSES } from "@/lib/constants";
+import { parseIssueAttachments } from "@/lib/attachments";
+import {
+  DEFAULT_ISSUE_STATUSES,
+  DEFAULT_PROJECT_STATUSES,
+  isClosedCategory,
+  isProjectStatusCategory,
+  type IssueStatusDef,
+  type ProjectStatusDef,
+} from "@/lib/project-status";
 import type { TeamWithProjects, UserLite, ProjectOverview, CycleOverview, CycleStatus } from "@/lib/types";
 import type { IssueView } from "@/lib/issue-view";
 
@@ -23,6 +31,7 @@ type RawIssue = {
   status: string;
   priority: string;
   labels: string;
+  attachments: string;
   createdAt: Date;
   projectId: string;
   cycleId: string | null;
@@ -55,6 +64,7 @@ function toIssueView(issue: RawIssue, currentUserId?: string): IssueView {
     milestoneName: issue.milestone?.name ?? null,
     cycleId: issue.cycleId,
     assignees: issue.assignees.map((a) => a.user),
+    attachments: parseIssueAttachments(issue.attachments),
     commentCount: issue._count.comments,
     hasNewDiscussion,
   };
@@ -202,6 +212,7 @@ export async function getTeamCycles(teamId: string): Promise<CycleOverview[]> {
     orderBy: { startDate: "desc" },
     include: { issues: { select: { status: true } } },
   });
+  const closed = await getClosedIssueStatusNames();
   return cycles.map((c) => ({
     id: c.id,
     teamId: c.teamId,
@@ -211,7 +222,7 @@ export async function getTeamCycles(teamId: string): Promise<CycleOverview[]> {
     targetDate: c.targetDate.toISOString(),
     status: cycleStatus(c.startDate, c.targetDate),
     issueCount: c.issues.length,
-    completedCount: c.issues.filter((i) => i.status === "Done" || i.status === "Cancelled").length,
+    completedCount: c.issues.filter((i) => closed.has(i.status)).length,
   }));
 }
 
@@ -270,12 +281,15 @@ export async function getProjectsStatusReport(user: AuthUser): Promise<ProjectSt
     },
   });
 
+  const issueStatuses = await getIssueStatuses();
+  const closedNames = new Set(issueStatuses.filter((s) => isClosedCategory(s.category)).map((s) => s.name));
+
   return projects.map((p) => {
     const counts: Record<string, number> = {};
-    for (const s of ISSUE_STATUSES) counts[s] = 0;
+    for (const s of issueStatuses) counts[s.name] = 0;
     for (const i of p.issues) counts[i.status] = (counts[i.status] ?? 0) + 1;
     const total = p.issues.length;
-    const closed = (counts["Done"] ?? 0) + (counts["Cancelled"] ?? 0);
+    const closed = p.issues.filter((i) => closedNames.has(i.status)).length;
     return {
       id: p.id,
       name: p.name,
@@ -333,4 +347,60 @@ export async function getMembersReport(): Promise<MemberReportRow[]> {
     assignedIssueCount: u._count.assignedIssues,
     createdIssueCount: u._count.createdIssues,
   }));
+}
+
+// Project statuses are workspace-wide and database driven. The table is seeded
+// with the original five-step lifecycle the first time it's read while empty.
+export async function getProjectStatuses(): Promise<ProjectStatusDef[]> {
+  let rows = await prisma.projectStatus.findMany({ orderBy: [{ position: "asc" }, { createdAt: "asc" }] });
+  if (rows.length === 0) {
+    await prisma.projectStatus.createMany({ data: DEFAULT_PROJECT_STATUSES });
+    rows = await prisma.projectStatus.findMany({ orderBy: [{ position: "asc" }, { createdAt: "asc" }] });
+  }
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    color: r.color,
+    category: isProjectStatusCategory(r.category) ? r.category : "planned",
+    position: r.position,
+    isDefault: r.isDefault,
+  }));
+}
+
+export async function getProjectStatusUsage(): Promise<Record<string, number>> {
+  const groups = await prisma.project.groupBy({ by: ["status"], _count: { _all: true } });
+  return Object.fromEntries(groups.map((g) => [g.status, g._count._all]));
+}
+
+function toStatusDef(r: { id: string; name: string; color: string; category: string; position: number; isDefault: boolean }) {
+  return {
+    id: r.id,
+    name: r.name,
+    color: r.color,
+    category: isProjectStatusCategory(r.category) ? r.category : ("planned" as const),
+    position: r.position,
+    isDefault: r.isDefault,
+  };
+}
+
+// Issue workflow statuses (board columns), database driven. Seeded with the
+// original five columns the first time the table is read while empty.
+export async function getIssueStatuses(): Promise<IssueStatusDef[]> {
+  let rows = await prisma.issueStatus.findMany({ orderBy: [{ position: "asc" }, { createdAt: "asc" }] });
+  if (rows.length === 0) {
+    await prisma.issueStatus.createMany({ data: DEFAULT_ISSUE_STATUSES });
+    rows = await prisma.issueStatus.findMany({ orderBy: [{ position: "asc" }, { createdAt: "asc" }] });
+  }
+  return rows.map(toStatusDef);
+}
+
+export async function getIssueStatusUsage(): Promise<Record<string, number>> {
+  const groups = await prisma.issue.groupBy({ by: ["status"], _count: { _all: true } });
+  return Object.fromEntries(groups.map((g) => [g.status, g._count._all]));
+}
+
+// Names of statuses whose category counts as closed (completed or canceled).
+export async function getClosedIssueStatusNames(): Promise<Set<string>> {
+  const statuses = await getIssueStatuses();
+  return new Set(statuses.filter((s) => isClosedCategory(s.category)).map((s) => s.name));
 }

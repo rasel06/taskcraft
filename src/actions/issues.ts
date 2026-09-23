@@ -1,9 +1,20 @@
 "use server";
 
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, requirePermission } from "@/lib/auth";
+import { getCurrentUser, requirePermission, canAccessProject } from "@/lib/auth";
+import {
+  isAllowedAttachment,
+  MAX_ATTACHMENT_SIZE,
+  parseIssueAttachments,
+  serializeIssueAttachments,
+  type IssueAttachment,
+} from "@/lib/attachments";
 import { dispatchNotification, issueRecipients, appUrl } from "@/lib/notify";
+import { getIssueStatuses } from "@/lib/data";
 import { formatIssueChanges, type FieldChange } from "@/lib/notify/format";
 import { issueCreatedMessage, issueUpdatedMessage } from "@/lib/notify/templates";
 
@@ -17,7 +28,55 @@ export interface CreateIssueInput {
   milestoneId?: string | null;
   cycleId?: string | null;
   labels?: string[];
-  attachments?: string[];
+  attachments?: IssueAttachment[];
+}
+
+const ISSUE_UPLOAD_PREFIX = "/uploads/issues/";
+
+// Only keep attachments that point at files we stored ourselves.
+function sanitizeAttachments(attachments: IssueAttachment[] | undefined): IssueAttachment[] {
+  return parseIssueAttachments(JSON.stringify(attachments ?? [])).filter(
+    (a) => a.url.startsWith(ISSUE_UPLOAD_PREFIX) && !a.url.includes(".."),
+  );
+}
+
+function attachmentNames(raw: string): string | null {
+  return parseIssueAttachments(raw).map((a) => a.fileName).join(", ") || null;
+}
+
+// Resolve a requested status against the database-driven workflow. An empty
+// value falls back to the default status; unknown names are rejected.
+async function resolveIssueStatus(status: string | undefined) {
+  const statuses = await getIssueStatuses();
+  if (!status) return (statuses.find((s) => s.isDefault) ?? statuses[0]).name;
+  if (!statuses.some((s) => s.name === status)) throw new Error(`"${status}" is not a valid issue status`);
+  return status;
+}
+
+export async function uploadIssueAttachment(projectId: string, formData: FormData): Promise<IssueAttachment> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Not signed in");
+  if (!(await canAccessProject(projectId, user))) throw new Error("You don't have access to this project");
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) throw new Error("No file provided");
+  if (file.size === 0) throw new Error("File is empty");
+  if (file.size > MAX_ATTACHMENT_SIZE) throw new Error("File is too large (max 10MB)");
+  if (!isAllowedAttachment(file.name)) throw new Error("Unsupported file type");
+
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const ext = path.extname(file.name).toLowerCase();
+  const storedName = `${randomUUID()}${ext}`;
+  const uploadDir = path.join(process.cwd(), "public", "uploads", "issues");
+  await mkdir(uploadDir, { recursive: true });
+  await writeFile(path.join(uploadDir, storedName), bytes);
+
+  return {
+    fileName: file.name,
+    fileType: file.type || "application/octet-stream",
+    fileSize: file.size,
+    url: `${ISSUE_UPLOAD_PREFIX}${storedName}`,
+  };
 }
 
 export async function createIssue(input: CreateIssueInput) {
@@ -30,6 +89,7 @@ export async function createIssue(input: CreateIssueInput) {
 
   const project = await prisma.project.findUnique({ where: { id: input.projectId } });
   if (!project) throw new Error("Project not found");
+  const status = await resolveIssueStatus(input.status);
 
   const issue = await prisma.$transaction(async (tx) => {
     const team = await tx.team.update({
@@ -42,14 +102,14 @@ export async function createIssue(input: CreateIssueInput) {
         number: team.issueCounter,
         title,
         description: input.description?.trim() || null,
-        status: input.status,
+        status,
         priority: input.priority,
         creatorId: user?.id || null,
         projectId: input.projectId,
         milestoneId: input.milestoneId || null,
         cycleId: input.cycleId || null,
         labels: (input.labels ?? []).join(","),
-        attachments: (input.attachments ?? []).join(","),
+        attachments: serializeIssueAttachments(sanitizeAttachments(input.attachments)),
         assignees: { create: assigneeIds.map((userId) => ({ userId })) },
       },
     });
@@ -98,15 +158,18 @@ export async function updateIssue(
     milestoneId: string | null;
     cycleId: string | null;
     labels: string[];
+    attachments: IssueAttachment[];
   }>,
 ) {
   const user = await getCurrentUser();
   const before = await prisma.issue.findUnique({ where: { id: issueId }, include: { assignees: true } });
   if (!before) throw new Error("Issue not found");
+  if (input.status !== undefined && input.status !== before.status) await resolveIssueStatus(input.status);
 
-  const { labels, assigneeIds, ...rest } = input;
+  const { labels, assigneeIds, attachments, ...rest } = input;
   const data: Record<string, unknown> = { ...rest };
   if (labels !== undefined) data.labels = labels.join(",");
+  if (attachments !== undefined) data.attachments = serializeIssueAttachments(sanitizeAttachments(attachments));
 
   const changes: FieldChange[] = [];
   const beforeAssigneeIds = before.assignees.map((a) => a.userId);
@@ -121,6 +184,15 @@ export async function updateIssue(
       changes.push({ field, from: fromValue ?? null, to: toValue ?? null });
       await tx.issueActivity.create({
         data: { issueId, field, fromValue: fromValue ?? null, toValue: toValue ?? null, userId: user?.id || null },
+      });
+    }
+
+    if (attachments !== undefined && before.attachments !== updated.attachments) {
+      const fromValue = attachmentNames(before.attachments);
+      const toValue = attachmentNames(updated.attachments);
+      changes.push({ field: "attachments", from: fromValue, to: toValue });
+      await tx.issueActivity.create({
+        data: { issueId, field: "attachments", fromValue, toValue, userId: user?.id || null },
       });
     }
 

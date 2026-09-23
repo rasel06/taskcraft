@@ -16,9 +16,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/shared/user-avatar";
-import { StatusIcon } from "@/components/shared/status-icon";
+import { ProjectStatusIcon } from "@/components/shared/project-status-icon";
 import { PriorityIcon } from "@/components/shared/priority-icon";
-import { PROJECT_STATUSES, PRIORITIES } from "@/lib/constants";
+import { PRIORITIES } from "@/lib/constants";
+import type { ProjectStatusDef } from "@/lib/project-status";
 import { formatDate } from "@/lib/utils";
 import type { ProjectOverview } from "@/lib/types";
 
@@ -34,7 +35,7 @@ function groupKey(project: ProjectOverview, groupBy: GroupBy) {
   return "All projects";
 }
 
-export function ProjectList({ projects }: { projects: ProjectOverview[] }) {
+export function ProjectList({ projects, statuses }: { projects: ProjectOverview[]; statuses: ProjectStatusDef[] }) {
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string[]>([]);
   const [priorityFilter, setPriorityFilter] = React.useState<string[]>([]);
@@ -77,8 +78,17 @@ export function ProjectList({ projects }: { projects: ProjectOverview[] }) {
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(p);
     });
-    return Array.from(map.entries());
-  }, [filtered, groupBy]);
+    const entries = Array.from(map.entries());
+    if (groupBy === "status") {
+      // Follow the configured lifecycle order; unknown statuses go last.
+      const rank = (name: string) => {
+        const i = statuses.findIndex((s) => s.name === name);
+        return i === -1 ? statuses.length : i;
+      };
+      entries.sort(([a], [b]) => rank(a) - rank(b));
+    }
+    return entries;
+  }, [filtered, groupBy, statuses]);
 
   function toggle(list: string[], setList: (v: string[]) => void, value: string) {
     setList(list.includes(value) ? list.filter((x) => x !== value) : [...list, value]);
@@ -113,7 +123,7 @@ export function ProjectList({ projects }: { projects: ProjectOverview[] }) {
             <DropdownMenuContent align="start">
               <DropdownMenuLabel>Status</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {PROJECT_STATUSES.map((s) => (
+              {statuses.map(({ name: s }) => (
                 <DropdownMenuCheckboxItem
                   key={s}
                   checked={statusFilter.includes(s)}
@@ -121,7 +131,7 @@ export function ProjectList({ projects }: { projects: ProjectOverview[] }) {
                   onSelect={(e) => e.preventDefault()}
                 >
                   <span className="flex items-center gap-2">
-                    <StatusIcon status={s} /> {s}
+                    <ProjectStatusIcon status={s} statuses={statuses} /> {s}
                   </span>
                 </DropdownMenuCheckboxItem>
               ))}
@@ -188,7 +198,7 @@ export function ProjectList({ projects }: { projects: ProjectOverview[] }) {
           <div className="flex flex-wrap items-center gap-1.5">
             {statusFilter.map((s) => (
               <Badge key={s} variant="indigo" className="gap-1">
-                <StatusIcon status={s} /> {s}
+                <ProjectStatusIcon status={s} statuses={statuses} /> {s}
                 <button onClick={() => toggle(statusFilter, setStatusFilter, s)} className="ml-0.5 hover:text-white">
                   <X className="h-3 w-3" />
                 </button>
@@ -238,7 +248,7 @@ export function ProjectList({ projects }: { projects: ProjectOverview[] }) {
             <div key={key} className="flex flex-col">
               {groupBy !== "none" && (
                 <div className="flex items-center gap-1.5 border-b border-border bg-muted/30 px-5 py-1.5 text-xs font-medium text-muted-foreground">
-                  {groupBy === "status" && <StatusIcon status={key} />}
+                  {groupBy === "status" && <ProjectStatusIcon status={key} statuses={statuses} />}
                   {groupBy === "priority" && <PriorityIcon priority={key} />}
                   {key}
                   <span className="ml-auto text-faint-foreground">{list.length}</span>
@@ -250,7 +260,7 @@ export function ProjectList({ projects }: { projects: ProjectOverview[] }) {
                   href={`/projects/${p.id}`}
                   className="flex items-center gap-3 border-b border-border px-5 py-2.5 hover:bg-muted/40"
                 >
-                  <StatusIcon status={p.status} />
+                  <ProjectStatusIcon status={p.status} statuses={statuses} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <span className="truncate text-sm text-foreground">{p.name}</span>

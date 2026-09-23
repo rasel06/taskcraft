@@ -1,14 +1,19 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { getVisibleTeams, getAllUsers } from "@/lib/data";
+import { getVisibleTeams, getAllUsers, getIssueStatuses } from "@/lib/data";
 import { can } from "@/lib/permissions";
 import { Sidebar } from "@/components/layout/sidebar";
+import { IssueStatusesProvider } from "@/components/shared/issue-statuses-context";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const currentUser = await getCurrentUser();
   if (!currentUser) redirect("/login");
 
-  const [users, teams] = await Promise.all([getAllUsers(), getVisibleTeams(currentUser)]);
+  const [users, teams, issueStatuses] = await Promise.all([
+    getAllUsers(),
+    getVisibleTeams(currentUser),
+    getIssueStatuses(),
+  ]);
 
   const safeCurrentUser = {
     id: currentUser.id,
@@ -24,9 +29,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden">
-      <Sidebar currentUser={safeCurrentUser} users={users} teams={teams} permissions={permissions} />
-      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto pt-12 print:overflow-visible print:pt-0 md:pt-0">{children}</main>
-    </div>
+    <IssueStatusesProvider statuses={issueStatuses} canManage={can(currentUser, "manage_issue_statuses")}>
+      <div className="flex h-screen w-full overflow-hidden">
+        <Sidebar currentUser={safeCurrentUser} users={users} teams={teams} permissions={permissions} />
+        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto pt-12 print:overflow-visible print:pt-0 md:pt-0">{children}</main>
+      </div>
+    </IssueStatusesProvider>
   );
 }

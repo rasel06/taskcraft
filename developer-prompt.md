@@ -174,6 +174,23 @@ The sections above are the original build prompt. The live application has since
 - In the New Project form, the Project Lead and Members pickers are mutually exclusive: picking someone as lead removes them from the members list and vice versa (the backend still always includes the lead as an ADMIN project member under the hood).
 - The Team Settings "Team lead" dropdown lists every workspace user, not just existing team members (matching what the backend already allowed).
 
+### Project statuses (database driven)
+- Project statuses live in a `ProjectStatus` table (name, hex color, category, position, isDefault) instead of a hardcoded list. The table is seeded with Backlog / Planned / Active / Completed / Cancelled the first time it is read while empty.
+- Settings → Projects → Statuses: everyone can view the lifecycle; users whose role has `manage_project_statuses` (seeded Admin) can create, edit (name / color / category), reorder, set the default, and delete statuses.
+- `Project.status` still stores the status name. Renaming a status updates every project on it; deleting a status that is in use requires choosing a replacement status, and the default status cannot be deleted.
+- The category (backlog / planned / started / completed / canceled) sets the icon shape; the color is used for the icon, the project header selector, filters, and roadmap bars. New projects get the default status; drafts get the first backlog-category status.
+
+### Issue statuses (database driven)
+- Issue statuses (board columns) live in an `IssueStatus` table with the same shape as `ProjectStatus`, seeded with Backlog / Todo / In Progress / Done / Cancelled (Backlog is the default for new issues).
+- Permission `manage_issue_statuses` (seeded Admin). Managers can add a column ("Add status" at the end of any status-grouped board, e.g. My Issues), and use each column header's "…" menu to edit, move left/right, make default, or delete (moving that status's issues to another status). The same list is at Settings → Issues → Statuses.
+- Reordering is drag-and-drop: drag a board column by its header (grip shows on hover), or drag rows by the handle on the settings page; ↑/↓ arrows and the column menu's Move left/right also work. The new order shows immediately (optimistic) and persists via `reorderStatuses`. Only roles with `manage_issue_statuses` (currently just Admin) see any of these controls, and the server action re-checks the permission. The project statuses settings page supports the same drag reordering under `manage_project_statuses`.
+- The statuses reach every client component through `IssueStatusesProvider` (in the `(app)` layout) and `useIssueStatuses()`; `StatusIcon` reads it too. Server actions for both kinds are in `src/actions/statuses.ts`.
+- Cycle and report progress count statuses in the completed/canceled categories as closed, rather than the literal names "Done"/"Cancelled".
+
+### Issue attachments and priority colors
+- Issue attachments are uploaded to `public/uploads/issues/` and stored as JSON on `Issue.attachments`; cards show an image cover and a preview dialog (images + PDFs), and the issue detail panel stages attachment/description edits until "Save changes" is pressed.
+- Priorities have distinct colors (Urgent red, High orange, Medium amber, Low blue) via `PRIORITY_STYLES` in `priority-icon.tsx`.
+
 ### UI
 - Default theme is light (was dark); the login page is a professional split-screen design (blue gradient brand panel + clean sign-in card), with the old demo-credentials box removed.
 - The sidebar is collapsible (icon-only rail, ~56px, state persisted in `localStorage`) via a toggle button next to the logo.

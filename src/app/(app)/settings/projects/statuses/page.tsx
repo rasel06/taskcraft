@@ -1,18 +1,26 @@
-import { PROJECT_STATUSES } from "@/lib/constants";
+import { getCurrentUser } from "@/lib/auth";
+import { can } from "@/lib/permissions";
+import { getProjectStatuses, getProjectStatusUsage } from "@/lib/data";
+import { WorkflowStatusesManager } from "@/components/settings/workflow-statuses";
 
-export default function ProjectStatusesPage() {
+export default async function ProjectStatusesPage() {
+  const currentUser = await getCurrentUser();
+  const [statuses, usage] = await Promise.all([getProjectStatuses(), getProjectStatusUsage()]);
+
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-sm font-semibold text-foreground">Project Statuses</h1>
-      <p className="max-w-md text-sm text-muted-foreground">The status lifecycle every project moves through.</p>
-      <ol className="flex max-w-md flex-col gap-1">
-        {PROJECT_STATUSES.map((s, i) => (
-          <li key={s} className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-foreground">
-            <span className="text-xs text-faint-foreground">{i + 1}</span>
-            {s}
-          </li>
-        ))}
-      </ol>
+      <div className="flex flex-col gap-1">
+        <h1 className="text-sm font-semibold text-foreground">Project Statuses</h1>
+        <p className="max-w-xl text-sm text-muted-foreground">
+          The status lifecycle every project moves through, in order. The starred status is given to new projects.
+        </p>
+      </div>
+      <WorkflowStatusesManager
+        kind="project"
+        statuses={statuses}
+        usage={usage}
+        canManage={can(currentUser, "manage_project_statuses")}
+      />
     </div>
   );
 }

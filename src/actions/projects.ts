@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireProjectManage, getCurrentUser } from "@/lib/auth";
 import { dispatchNotification, projectRecipients, appUrl } from "@/lib/notify";
+import { getProjectStatuses } from "@/lib/data";
 import { formatProjectChanges, type FieldChange } from "@/lib/notify/format";
 import {
   projectCreatedMessage,
@@ -14,6 +15,20 @@ import {
   memberRemovedMessage,
   roleChangedMessage,
 } from "@/lib/notify/templates";
+
+async function assertValidProjectStatus(status: string) {
+  const statuses = await getProjectStatuses();
+  if (!statuses.some((s) => s.name === status)) throw new Error(`"${status}" is not a valid project status`);
+}
+
+// New projects start on the workspace default status; drafts start on the first
+// backlog-type status when one exists.
+async function initialProjectStatus(isDraft: boolean) {
+  const statuses = await getProjectStatuses();
+  const fallback = statuses.find((s) => s.isDefault) ?? statuses[0];
+  if (isDraft) return (statuses.find((s) => s.category === "backlog") ?? fallback).name;
+  return fallback.name;
+}
 
 export interface CreateProjectInput {
   name: string;
@@ -42,6 +57,8 @@ export async function createProject(input: CreateProjectInput) {
   });
   if (existing) throw new Error(`A project named "${name}" already exists in this team`);
 
+  const status = await initialProjectStatus(input.isDraft);
+
   const project = await prisma.project.create({
     data: {
       name,
@@ -49,7 +66,7 @@ export async function createProject(input: CreateProjectInput) {
       teamId: input.teamId,
       leadId: input.leadId,
       priority: input.priority,
-      status: input.isDraft ? "Backlog" : "Planned",
+      status,
       isDraft: input.isDraft,
       startDate: input.startDate ? new Date(input.startDate) : null,
       targetDate: input.targetDate ? new Date(input.targetDate) : null,
@@ -86,6 +103,7 @@ export async function createProject(input: CreateProjectInput) {
 }
 
 export async function updateProjectStatus(projectId: string, status: string) {
+  await assertValidProjectStatus(status);
   const actor = await getCurrentUser();
   const before = await prisma.project.findUnique({ where: { id: projectId }, select: { status: true, name: true } });
   const project = await prisma.project.update({ where: { id: projectId }, data: { status } });
@@ -133,6 +151,7 @@ export async function updateProject(
   const actor = await getCurrentUser();
   const before = await prisma.project.findUnique({ where: { id: projectId } });
   if (!before) throw new Error("Project not found");
+  if (input.status !== undefined && input.status !== before.status) await assertValidProjectStatus(input.status);
 
   if (input.name !== undefined) {
     const name = input.name.trim();

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, canAccessTeam } from "@/lib/auth";
-import { getProjectsOverview } from "@/lib/data";
+import { getProjectsOverview, getProjectStatuses } from "@/lib/data";
 import { RoadmapTimeline } from "@/components/project/roadmap-timeline";
 import { AccessDenied } from "@/components/shared/access-denied";
 import { Lock, Map } from "lucide-react";
@@ -13,7 +13,10 @@ export default async function TeamRoadmapsPage({ params }: { params: Promise<{ t
 
   const user = await getCurrentUser();
   const allowed = await canAccessTeam(teamId, user);
-  const projects = allowed ? await getProjectsOverview(user, teamId) : [];
+  const [projects, statuses] = await Promise.all([
+    allowed ? getProjectsOverview(user, teamId) : Promise.resolve([]),
+    getProjectStatuses(),
+  ]);
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -30,7 +33,7 @@ export default async function TeamRoadmapsPage({ params }: { params: Promise<{ t
           <p className="text-sm">No published projects yet</p>
         </div>
       ) : (
-        <RoadmapTimeline projects={projects} />
+        <RoadmapTimeline projects={projects} statuses={statuses} />
       )}
     </div>
   );

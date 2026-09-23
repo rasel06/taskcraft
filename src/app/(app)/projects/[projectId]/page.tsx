@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, canAccessProject } from "@/lib/auth";
-import { getProjectIssues, getAllUsers } from "@/lib/data";
+import { getProjectIssues, getAllUsers, getProjectStatuses } from "@/lib/data";
 import { can } from "@/lib/permissions";
 import { AccessDenied } from "@/components/shared/access-denied";
 import { Board } from "@/components/board/board";
@@ -10,6 +10,7 @@ import { ProjectHeaderControls } from "@/components/project/project-header-contr
 import { MilestonesPanel } from "@/components/project/milestones-panel";
 import { CreateIssueDialog } from "@/components/issue/create-issue-dialog";
 import { IssueDetailModal } from "@/components/issue/issue-detail-modal";
+import { parseIssueAttachments } from "@/lib/attachments";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import { Plus, Calendar, Settings } from "lucide-react";
@@ -48,7 +49,7 @@ export default async function ProjectPage({
     );
   }
 
-  const [issues, users] = await Promise.all([getProjectIssues(projectId, user?.id), getAllUsers()]);
+  const [issues, users, statuses] = await Promise.all([getProjectIssues(projectId, user?.id), getAllUsers(), getProjectStatuses()]);
   const selectedIssue = issueId ? issues.find((i) => i.id === issueId) : undefined;
   const fullSelectedIssue = selectedIssue
     ? await prisma.issue.findUnique({
@@ -96,7 +97,7 @@ export default async function ProjectPage({
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <ProjectHeaderControls projectId={project.id} status={project.status} priority={project.priority} />
+            <ProjectHeaderControls projectId={project.id} status={project.status} priority={project.priority} statuses={statuses} />
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <UserAvatar user={project.lead} className="h-4 w-4" /> {project.lead.name}
             </span>
@@ -129,11 +130,13 @@ export default async function ProjectPage({
           key={`${fullSelectedIssue.id}:${view ?? "detail"}`}
           issue={{
             id: fullSelectedIssue.id,
+            projectId: fullSelectedIssue.projectId,
             title: fullSelectedIssue.title,
             description: fullSelectedIssue.description,
             status: fullSelectedIssue.status,
             priority: fullSelectedIssue.priority,
             labels: fullSelectedIssue.labels,
+            attachments: parseIssueAttachments(fullSelectedIssue.attachments),
             createdAt: fullSelectedIssue.createdAt.toISOString(),
             assigneeIds: fullSelectedIssue.assignees.map((a) => a.userId),
             team: { name: project.team.name, icon: project.team.icon, color: project.team.color },
