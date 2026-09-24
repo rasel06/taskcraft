@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Search,
@@ -11,7 +12,6 @@ import {
   Plus,
   X,
   MoreHorizontal,
-  Pencil,
   ArrowLeft,
   ArrowRight,
   Star,
@@ -40,10 +40,11 @@ import { IssueRow } from "@/components/issue/issue-row";
 import { StatusIcon } from "@/components/shared/status-icon";
 import { PriorityIcon } from "@/components/shared/priority-icon";
 import { updateIssue } from "@/actions/issues";
+import { addIssueStatusPresetToProject } from "@/actions/issue-status-presets";
+import { ProjectStatusIcon } from "@/components/shared/project-status-icon";
 import { PRIORITIES } from "@/lib/constants";
 import { useProjectIssueStatuses, useIssueStatusColumns } from "@/components/shared/issue-statuses-context";
 import {
-  StatusFormDialog,
   DeleteStatusDialog,
   useStatusMutations,
   useOptimisticStatusOrder,
@@ -353,19 +354,8 @@ export function Board({
             </div>
             );
           })}
-          {groupBy === "status" && canManage && (
-            <StatusFormDialog
-              kind="issue"
-              projectId={projectId}
-              trigger={
-                <button
-                  type="button"
-                  className="flex h-9 w-48 shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-border text-xs text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Add status
-                </button>
-              }
-            />
+          {groupBy === "status" && canManage && projectId && (
+            <AddStatusFromPresets projectId={projectId} statuses={statuses} />
           )}
         </div>
       )}
@@ -373,9 +363,63 @@ export function Board({
   );
 }
 
+// Adds a status from the preset library as a new column (admins only).
+function AddStatusFromPresets({ projectId, statuses }: { projectId: string; statuses: IssueStatusDef[] }) {
+  const router = useRouter();
+  const { presets } = useProjectIssueStatuses(projectId);
+  const [busy, setBusy] = React.useState(false);
+  const available = presets.filter((p) => !statuses.some((s) => s.name.toLowerCase() === p.name.toLowerCase()));
+
+  async function add(presetId: string) {
+    setBusy(true);
+    try {
+      await addIssueStatusPresetToProject(projectId, presetId);
+      toast.success("Status added");
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add status");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          disabled={busy}
+          className="flex h-9 w-48 shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-border text-xs text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+        >
+          <Plus className="h-3.5 w-3.5" /> Add status
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-60">
+        <DropdownMenuLabel>Add from status presets</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {available.length === 0 ? (
+          <div className="px-2 py-1.5 text-xs text-muted-foreground">All presets are already on this board.</div>
+        ) : (
+          available.map((p) => (
+            <DropdownMenuItem key={p.id} onSelect={() => add(p.id)}>
+              <ProjectStatusIcon status={{ ...p, isDefault: false }} /> {p.name}
+            </DropdownMenuItem>
+          ))
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href={`/settings/projects/statuses?tab=presets`} className="text-xs text-muted-foreground">
+            Manage status presets…
+          </Link>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 // Column header menu for managing a project's issue status from its board.
-// Only rendered for workspace admins (manage_issue_statuses) and the project's
-// lead / admin members; the server actions check this again.
+// Only rendered for admins (manage_issue_statuses); the server actions check
+// this again. Names and colors are edited in the preset library.
 function StatusColumnMenu({
   projectId,
   status,
@@ -385,7 +429,6 @@ function StatusColumnMenu({
   status?: IssueStatusDef;
   statuses: IssueStatusDef[];
 }) {
-  const [editOpen, setEditOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const { busy, move, makeDefault } = useStatusMutations("issue", projectId);
   // Issues can carry a status name that was removed from the workflow; nothing to manage then.
@@ -407,9 +450,6 @@ function StatusColumnMenu({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => setEditOpen(true)}>
-            <Pencil className="h-3.5 w-3.5" /> Edit status
-          </DropdownMenuItem>
           <DropdownMenuItem disabled={index <= 0} onSelect={() => move(statuses, index, -1)}>
             <ArrowLeft className="h-3.5 w-3.5" /> Move left
           </DropdownMenuItem>
@@ -421,16 +461,16 @@ function StatusColumnMenu({
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => setDeleteOpen(true)} className="text-red-600 focus:text-red-600">
-            <Trash2 className="h-3.5 w-3.5" /> Delete status
+            <Trash2 className="h-3.5 w-3.5" /> Remove from project
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <StatusFormDialog kind="issue" projectId={projectId} status={status} open={editOpen} onOpenChange={setEditOpen} />
       <DeleteStatusDialog
         kind="issue"
         projectId={projectId}
         status={status}
         statuses={statuses}
+        remove
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
       />

@@ -169,12 +169,30 @@ model ProjectStatus {
   updatedAt DateTime @updatedAt
 }
 
-// Per-project issue workflow (board columns), managed from the project's
-// board column headers or Settings > Issues > Statuses. Issue.status stores
-// the name, which must exist in the issue's project workflow.
+// Workspace library of issue statuses. Admins curate it at Settings >
+// Projects > Statuses; each project's workflow is a chosen subset of these.
+model IssueStatusPreset {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  color       String        @default("#71717a")
+  category    String        @default("planned")
+  position    Int           @default(0)
+  // Ticked by default when choosing the workflow for a new project.
+  preselected Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  statuses    IssueStatus[]
+}
+
+// Per-project issue workflow (board columns): the presets a project uses, in
+// its own order, with its own default. Name/color/category mirror the linked
+// preset. Issue.status stores the name, which must exist in the issue's
+// project workflow.
 model IssueStatus {
   id        String   @id @default(cuid())
   projectId String
+  presetId  String?
   name      String
   color     String   @default("#71717a")
   category  String   @default("planned")
@@ -184,6 +202,7 @@ model IssueStatus {
   updatedAt DateTime @updatedAt
 
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  preset    IssueStatusPreset? @relation(fields: [presetId], references: [id], onDelete: SetNull)
 
   @@unique([projectId, name])
   @@index([projectId, position])

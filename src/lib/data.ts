@@ -2,11 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/permissions";
 import { parseIssueAttachments } from "@/lib/attachments";
 import {
-  DEFAULT_ISSUE_STATUSES,
+  DEFAULT_ISSUE_STATUS_PRESETS,
   DEFAULT_PROJECT_STATUSES,
   isClosedCategory,
   isProjectStatusCategory,
   type IssueStatusDef,
+  type IssueStatusPresetDef,
   type ProjectStatusDef,
 } from "@/lib/project-status";
 import type { TeamWithProjects, UserLite, ProjectOverview, CycleOverview, CycleStatus } from "@/lib/types";
@@ -384,20 +385,68 @@ function toStatusDef(r: { id: string; name: string; color: string; category: str
   };
 }
 
-// Issue workflow statuses are per project. A project without any rows (new, or
-// created before per-project workflows) gets the default five columns.
+// The workspace preset library, seeded on first read.
+export async function getIssueStatusPresets(): Promise<IssueStatusPresetDef[]> {
+  const order = [{ position: "asc" as const }, { createdAt: "asc" as const }];
+  let rows = await prisma.issueStatusPreset.findMany({ orderBy: order });
+  if (rows.length === 0) {
+    try {
+      await prisma.issueStatusPreset.createMany({ data: DEFAULT_ISSUE_STATUS_PRESETS });
+    } catch (err) {
+      if ((err as { code?: string }).code !== "P2002") throw err;
+    }
+    rows = await prisma.issueStatusPreset.findMany({ orderBy: order });
+  }
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    color: r.color,
+    category: isProjectStatusCategory(r.category) ? r.category : "planned",
+    position: r.position,
+    preselected: r.preselected,
+  }));
+}
+
+// Number of projects using each preset, keyed by preset id.
+export async function getIssueStatusPresetUsage(): Promise<Record<string, number>> {
+  const groups = await prisma.issueStatus.groupBy({ by: ["presetId"], where: { presetId: { not: null } }, _count: { _all: true } });
+  return Object.fromEntries(groups.map((g) => [g.presetId!, g._count._all]));
+}
+
+// Issue workflow statuses are per project. A project without any rows gets the
+// preselected presets (the first backlog-type one as default).
 async function ensureIssueStatuses(projectIds: string[]) {
   if (projectIds.length === 0) return;
   const seeded = await prisma.issueStatus.groupBy({ by: ["projectId"], where: { projectId: { in: projectIds } } });
   const have = new Set(seeded.map((g) => g.projectId));
-  for (const projectId of projectIds.filter((id) => !have.has(id))) {
+  const missing = projectIds.filter((id) => !have.has(id));
+  if (missing.length === 0) return;
+  const presets = (await getIssueStatusPresets()).filter((p) => p.preselected);
+  for (const projectId of missing) {
     try {
-      await prisma.issueStatus.createMany({ data: DEFAULT_ISSUE_STATUSES.map((d) => ({ ...d, projectId })) });
+      await prisma.issueStatus.createMany({ data: workflowRowsFromPresets(projectId, presets) });
     } catch (err) {
       // A concurrent request seeded the same project first; its rows are fine.
       if ((err as { code?: string }).code !== "P2002") throw err;
     }
   }
+}
+
+// IssueStatus rows for a project from chosen presets, in the given order.
+export function workflowRowsFromPresets(projectId: string, presets: IssueStatusPresetDef[], defaultPresetId?: string | null) {
+  const defaultId =
+    presets.find((p) => p.id === defaultPresetId)?.id ??
+    presets.find((p) => p.category === "backlog")?.id ??
+    presets[0]?.id;
+  return presets.map((p, position) => ({
+    projectId,
+    presetId: p.id,
+    name: p.name,
+    color: p.color,
+    category: p.category,
+    position,
+    isDefault: p.id === defaultId,
+  }));
 }
 
 const ISSUE_STATUS_ORDER = [{ position: "asc" as const }, { createdAt: "asc" as const }];

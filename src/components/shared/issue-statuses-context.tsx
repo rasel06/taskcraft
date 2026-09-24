@@ -1,13 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { PROJECT_STATUS_CATEGORIES, type IssueStatusDef } from "@/lib/project-status";
+import { PROJECT_STATUS_CATEGORIES, type IssueStatusDef, type IssueStatusPresetDef } from "@/lib/project-status";
 
 interface IssueStatusesValue {
   // Each visible project's own issue workflow, in column order.
   byProject: Record<string, IssueStatusDef[]>;
   // Projects whose workflow the current user may manage.
   manageableProjectIds: string[];
+  // Preset library, provided where workflows can be changed (project page, for admins).
+  presets?: IssueStatusPresetDef[];
 }
 
 const IssueStatusesContext = React.createContext<IssueStatusesValue>({ byProject: {}, manageableProjectIds: [] });
@@ -31,11 +33,13 @@ export function ProjectIssueStatusesProvider({
   projectId,
   statuses,
   canManage,
+  presets,
   children,
 }: {
   projectId: string;
   statuses: IssueStatusDef[];
   canManage: boolean;
+  presets?: IssueStatusPresetDef[];
   children: React.ReactNode;
 }) {
   const parent = React.useContext(IssueStatusesContext);
@@ -45,20 +49,23 @@ export function ProjectIssueStatusesProvider({
       manageableProjectIds: canManage
         ? Array.from(new Set([...parent.manageableProjectIds, projectId]))
         : parent.manageableProjectIds.filter((id) => id !== projectId),
+      presets: presets ?? parent.presets,
     }),
-    [parent, projectId, statuses, canManage],
+    [parent, projectId, statuses, canManage, presets],
   );
   return <IssueStatusesContext.Provider value={value}>{children}</IssueStatusesContext.Provider>;
 }
 
 const EMPTY: IssueStatusDef[] = [];
+const NO_PRESETS: IssueStatusPresetDef[] = [];
 
 // One project's workflow and whether the current user can manage it.
 export function useProjectIssueStatuses(projectId: string | null | undefined) {
-  const { byProject, manageableProjectIds } = React.useContext(IssueStatusesContext);
+  const { byProject, manageableProjectIds, presets } = React.useContext(IssueStatusesContext);
   return {
     statuses: (projectId && byProject[projectId]) || EMPTY,
     canManage: !!projectId && manageableProjectIds.includes(projectId),
+    presets: presets ?? NO_PRESETS,
   };
 }
 

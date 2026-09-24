@@ -207,33 +207,15 @@ export async function requireProjectManage(projectId: string) {
   return user;
 }
 
-// A project's issue workflow can be managed by anyone with the workspace
-// "manage_issue_statuses" permission, or by that project's lead / ADMIN member.
-export async function canManageIssueStatuses(projectId: string, user: AuthUser) {
-  if (!user) return false;
-  if (can(user, "manage_issue_statuses")) return true;
-
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-    select: { leadId: true, members: { where: { userId: user.id }, select: { role: true } } },
-  });
-  if (!project) return false;
-  return project.leadId === user.id || project.members.some((m) => m.role === "ADMIN");
+// Issue workflows (the preset library and each project's chosen statuses) are
+// managed only by users whose role has "manage_issue_statuses" (the Admin role).
+export async function canManageIssueStatuses(_projectId: string, user: AuthUser) {
+  return can(user, "manage_issue_statuses");
 }
 
 // Project ids (among `projectIds`) whose issue workflow `user` can manage.
 export async function manageableIssueStatusProjectIds(projectIds: string[], user: AuthUser): Promise<string[]> {
-  if (!user || projectIds.length === 0) return [];
-  if (can(user, "manage_issue_statuses")) return projectIds;
-
-  const projects = await prisma.project.findMany({
-    where: {
-      id: { in: projectIds },
-      OR: [{ leadId: user.id }, { members: { some: { userId: user.id, role: "ADMIN" } } }],
-    },
-    select: { id: true },
-  });
-  return projects.map((p) => p.id);
+  return can(user, "manage_issue_statuses") ? projectIds : [];
 }
 
 export interface IssueEditAccess {

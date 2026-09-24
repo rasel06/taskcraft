@@ -44,15 +44,30 @@ export const DEFAULT_PROJECT_STATUSES: Omit<ProjectStatusDef, "id">[] = [
   { name: "Cancelled", color: "#ef4444", category: "canceled", position: 4, isDefault: false },
 ];
 
-// Issue statuses share the same shape; the original five board columns.
+// Issue statuses (a project's workflow rows) share the same shape.
 export type IssueStatusDef = ProjectStatusDef;
 
-export const DEFAULT_ISSUE_STATUSES: Omit<IssueStatusDef, "id">[] = [
-  { name: "Backlog", color: "#71717a", category: "backlog", position: 0, isDefault: true },
-  { name: "Todo", color: "#a1a1aa", category: "planned", position: 1, isDefault: false },
-  { name: "In Progress", color: "#f59e0b", category: "started", position: 2, isDefault: false },
-  { name: "Done", color: "#10b981", category: "completed", position: 3, isDefault: false },
-  { name: "Cancelled", color: "#ef4444", category: "canceled", position: 4, isDefault: false },
+export interface IssueStatusPresetDef {
+  id: string;
+  name: string;
+  color: string;
+  category: ProjectStatusCategory;
+  position: number;
+  preselected: boolean;
+}
+
+// Seeded into the IssueStatusPreset library the first time it's read while
+// empty. The five original columns are preselected for new projects; the rest
+// are available to add.
+export const DEFAULT_ISSUE_STATUS_PRESETS: Omit<IssueStatusPresetDef, "id">[] = [
+  { name: "Backlog", color: "#71717a", category: "backlog", position: 0, preselected: true },
+  { name: "Todo", color: "#3b82f6", category: "planned", position: 1, preselected: true },
+  { name: "In Progress", color: "#f59e0b", category: "started", position: 2, preselected: true },
+  { name: "In Review", color: "#a855f7", category: "started", position: 3, preselected: false },
+  { name: "Testing", color: "#14b8a6", category: "started", position: 4, preselected: false },
+  { name: "Blocked", color: "#f97316", category: "started", position: 5, preselected: false },
+  { name: "Done", color: "#10b981", category: "completed", position: 6, preselected: true },
+  { name: "Cancelled", color: "#ef4444", category: "canceled", position: 7, preselected: true },
 ];
 
 export function isClosedCategory(category: string): boolean {

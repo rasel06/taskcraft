@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireProjectManage, getCurrentUser, requirePermission } from "@/lib/auth";
 import { dispatchNotification, projectRecipients, appUrl } from "@/lib/notify";
-import { getProjectStatuses } from "@/lib/data";
+import { getProjectStatuses, getIssueStatusPresets, workflowRowsFromPresets } from "@/lib/data";
 import { formatProjectChanges, type FieldChange } from "@/lib/notify/format";
 import {
   projectCreatedMessage,
@@ -41,6 +41,10 @@ export interface CreateProjectInput {
   priority: string;
   isDraft: boolean;
   milestones: { name: string; description?: string }[];
+  // Issue workflow: chosen status presets in column order, and which one new
+  // issues start in. Omitted = the presets marked "preselected".
+  issueStatusPresetIds?: string[];
+  defaultIssueStatusPresetId?: string | null;
 }
 
 export async function createProject(input: CreateProjectInput) {
@@ -61,6 +65,22 @@ export async function createProject(input: CreateProjectInput) {
 
   const status = await initialProjectStatus(input.isDraft);
 
+  const presets = await getIssueStatusPresets();
+  const byId = new Map(presets.map((p) => [p.id, p]));
+  const chosen = input.issueStatusPresetIds
+    ? Array.from(new Set(input.issueStatusPresetIds)).map((id) => byId.get(id)).filter((p) => !!p)
+    : presets.filter((p) => p.preselected);
+  if (chosen.length === 0) throw new Error("Choose at least one issue status for the project");
+  // Nested create under the project supplies projectId itself.
+  const workflow = workflowRowsFromPresets("", chosen, input.defaultIssueStatusPresetId).map((row) => ({
+    presetId: row.presetId,
+    name: row.name,
+    color: row.color,
+    category: row.category,
+    position: row.position,
+    isDefault: row.isDefault,
+  }));
+
   const project = await prisma.project.create({
     data: {
       name,
@@ -78,6 +98,7 @@ export async function createProject(input: CreateProjectInput) {
           role: userId === input.leadId ? "ADMIN" : "MEMBER",
         })),
       },
+      issueStatuses: { create: workflow },
       milestones: {
         create: input.milestones
           .filter((m) => m.name.trim())

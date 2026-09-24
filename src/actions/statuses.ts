@@ -94,11 +94,14 @@ async function assertNameFree(scope: Scope, name: string, exceptId?: string) {
 }
 
 function revalidate(scope: Scope) {
-  revalidatePath(scope.kind === "issue" ? "/settings/issues/statuses" : "/settings/projects/statuses");
+  revalidatePath("/settings/projects/statuses");
   revalidatePath("/", "layout");
 }
 
 export async function createStatus(kindArg: StatusKind, input: StatusInput, projectId?: string | null) {
+  // Issue statuses come from the preset library (issue-status-presets.ts);
+  // names, colors and categories are edited there, not per project.
+  if (kindArg === "issue") throw new Error("Issue statuses are managed from the status presets");
   const scope = await authorize(kindArg, projectId);
   const data = validate(input);
   await assertNameFree(scope, data.name);
@@ -116,6 +119,9 @@ export async function createStatus(kindArg: StatusKind, input: StatusInput, proj
 }
 
 export async function updateStatus(kindArg: StatusKind, id: string, input: StatusInput, projectId?: string | null) {
+  // Issue statuses come from the preset library (issue-status-presets.ts);
+  // names, colors and categories are edited there, not per project.
+  if (kindArg === "issue") throw new Error("Issue statuses are managed from the status presets");
   const scope = await authorize(kindArg, projectId);
   const data = validate(input);
   const before = await findInScope(scope, id);

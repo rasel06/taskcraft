@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, canAccessProject, canManageProject } from "@/lib/auth";
-import { getAllUsers } from "@/lib/data";
+import { can } from "@/lib/permissions";
+import { getAllUsers, getIssueStatuses, getIssueStatusPresets, getIssueStatusUsage } from "@/lib/data";
+import { ProjectWorkflowEditor } from "@/components/settings/issue-workflow";
 import { AccessDenied } from "@/components/shared/access-denied";
 import { ProjectSettingsForm } from "@/components/project/project-settings-form";
 import { ProjectMembersManager } from "@/components/project/project-members-manager";
@@ -23,6 +25,9 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
   const user = await getCurrentUser();
   const allowed = await canAccessProject(projectId, user);
   const canManage = await canManageProject(projectId, user);
+  const [issueStatuses, presets, statusUsage] = allowed
+    ? await Promise.all([getIssueStatuses(projectId), getIssueStatusPresets(), getIssueStatusUsage(projectId)])
+    : [[], [], {}];
 
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
@@ -51,6 +56,19 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
               leadId={project.leadId}
               canManage={canManage}
               currentUserId={user?.id ?? ""}
+            />
+          </section>
+          <section className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Issue workflow</h2>
+              <p className="text-sm text-muted-foreground">The board columns for this project&apos;s issues, in order.</p>
+            </div>
+            <ProjectWorkflowEditor
+              projectId={project.id}
+              statuses={issueStatuses}
+              presets={presets}
+              usage={statusUsage}
+              canManage={can(user, "manage_issue_statuses")}
             />
           </section>
         </div>

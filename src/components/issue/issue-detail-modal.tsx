@@ -128,10 +128,13 @@ export function IssueDetailModal({
   // Closing (Esc, outside click, ✕, breadcrumb) returns to the board; unsaved
   // edits need confirmation first. Uses push, not back(), so a deep link from a
   // notification still lands on the board.
+  //
+  // Navigation waits until the close animation has finished (onAnimationEnd
+  // below): pushing right away re-renders the page without this modal, which
+  // cuts the animation off mid-fade and makes the dialog blink.
   function requestClose() {
     if (dirty && !window.confirm("You have unsaved changes. Discard them?")) return;
     setOpen(false);
-    router.push(boardHref, { scroll: false });
   }
 
   function discardChanges() {
@@ -189,7 +192,6 @@ export function IssueDetailModal({
       toast.success(`${issue.id} deleted`);
       setConfirmDelete(false);
       setOpen(false);
-      router.push(boardHref, { scroll: false });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete issue");
       setDeleting(false);
@@ -204,6 +206,9 @@ export function IssueDetailModal({
       <DialogContent
         size="2xl"
         aria-describedby={undefined}
+        onAnimationEnd={(e) => {
+          if (!open && e.target === e.currentTarget) router.push(boardHref, { scroll: false });
+        }}
         className="flex h-[min(88vh,56rem)] flex-col overflow-hidden"
       >
       {/* Breadcrumb bar (right padding leaves room for the dialog's close button) */}

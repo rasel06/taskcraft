@@ -275,18 +275,31 @@ export async function deleteIssue(issueId: string) {
   revalidatePath("/", "layout");
 }
 
+type TimelinePerson = { id: string; name: string; avatarUrl: string | null };
+
 export interface IssueTimeline {
-  issue: { id: string; title: string; createdAt: string; creatorName: string | null };
+  issue: {
+    id: string;
+    projectId: string;
+    title: string;
+    status: string;
+    priority: string;
+    createdAt: string;
+    creator: TimelinePerson | null;
+    assignees: TimelinePerson[];
+  };
   events: {
     id: string;
     field: string;
     fromValue: string | null;
     toValue: string | null;
     createdAt: string;
-    user: { id: string; name: string; avatarUrl: string | null } | null;
+    user: TimelinePerson | null;
   }[];
   // Names for ids referenced in event values (assignees, milestones, cycles).
   names: Record<string, string>;
+  // People referenced by assignee changes, for avatars in the timeline.
+  people: Record<string, TimelinePerson>;
 }
 
 // Full audit trail of one issue, oldest first, for the card's Timeline dialog.
@@ -294,31 +307,50 @@ export async function getIssueTimeline(issueId: string): Promise<IssueTimeline> 
   const user = await getCurrentUser();
   if (!user) throw new Error("Not signed in");
 
+  const personSelect = { select: { id: true, name: true, avatarUrl: true } } as const;
   const issue = await prisma.issue.findUnique({
     where: { id: issueId },
     select: {
       id: true,
       title: true,
+      status: true,
+      priority: true,
       createdAt: true,
       projectId: true,
-      creator: { select: { name: true } },
+      creator: personSelect,
+      assignees: { select: { user: personSelect } },
       activity: {
         orderBy: { createdAt: "asc" },
-        include: { user: { select: { id: true, name: true, avatarUrl: true } } },
+        include: { user: personSelect },
       },
     },
   });
   if (!issue) throw new Error("Issue not found");
   if (!(await canAccessProject(issue.projectId, user))) throw new Error("You don't have access to this issue");
 
-  const names = await getActivityReferenceNames(issue.activity);
+  const assigneeIds = new Set(
+    issue.activity
+      .filter((a) => a.field === "assignees")
+      .flatMap((a) => [a.fromValue, a.toValue])
+      .flatMap((v) => (v ? v.split(",").filter(Boolean) : [])),
+  );
+  const [names, people] = await Promise.all([
+    getActivityReferenceNames(issue.activity),
+    assigneeIds.size
+      ? prisma.user.findMany({ where: { id: { in: [...assigneeIds] } }, ...personSelect })
+      : Promise.resolve([] as TimelinePerson[]),
+  ]);
 
   return {
     issue: {
       id: issue.id,
+      projectId: issue.projectId,
       title: issue.title,
+      status: issue.status,
+      priority: issue.priority,
       createdAt: issue.createdAt.toISOString(),
-      creatorName: issue.creator?.name ?? null,
+      creator: issue.creator,
+      assignees: issue.assignees.map((a) => a.user),
     },
     events: issue.activity.map((a) => ({
       id: a.id,
@@ -329,5 +361,6 @@ export async function getIssueTimeline(issueId: string): Promise<IssueTimeline> 
       user: a.user,
     })),
     names,
+    people: Object.fromEntries(people.map((p) => [p.id, p])),
   };
 }

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, canAccessProject, canManageIssueStatuses, getIssueEditAccess } from "@/lib/auth";
-import { getProjectIssues, getAllUsers, getProjectStatuses, getIssueStatuses, getActivityReferenceNames } from "@/lib/data";
+import { getProjectIssues, getAllUsers, getProjectStatuses, getIssueStatuses, getActivityReferenceNames, getIssueStatusPresets } from "@/lib/data";
 import { ProjectIssueStatusesProvider } from "@/components/shared/issue-statuses-context";
 import { can } from "@/lib/permissions";
 import { AccessDenied } from "@/components/shared/access-denied";
@@ -57,6 +57,7 @@ export default async function ProjectPage({
     getIssueStatuses(projectId),
     canManageIssueStatuses(projectId, user),
   ]);
+  const presets = canManageStatuses ? await getIssueStatusPresets() : undefined;
   const selectedIssue = issueId ? issues.find((i) => i.id === issueId) : undefined;
   const fullSelectedIssue = selectedIssue
     ? await prisma.issue.findUnique({
@@ -79,7 +80,7 @@ export default async function ProjectPage({
     : [null, {}];
 
   return (
-    <ProjectIssueStatusesProvider projectId={projectId} statuses={issueStatuses} canManage={canManageStatuses}>
+    <ProjectIssueStatusesProvider projectId={projectId} statuses={issueStatuses} canManage={canManageStatuses} presets={presets}>
     <div className="flex flex-1 overflow-hidden">
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex flex-col gap-2 border-b border-border px-5 py-3">

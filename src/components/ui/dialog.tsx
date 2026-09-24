@@ -19,7 +19,9 @@ const DialogOverlay = React.forwardRef<
     className={cn(
       // Translucent scrim: dims, softly blurs and desaturates the page so it
       // stays as context but can't compete with the dialog (e.g. bright buttons).
-      "fixed inset-0 z-50 bg-zinc-950/45 backdrop-blur-[3px] backdrop-saturate-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      // The blur is animated together with the tint (see .dialog-scrim in
+      // globals.css); fading opacity alone leaves the blur to pop off at the end.
+      "dialog-scrim fixed inset-0 z-50 bg-zinc-950/45 backdrop-blur-[3px] backdrop-saturate-50",
       className,
     )}
     {...props}

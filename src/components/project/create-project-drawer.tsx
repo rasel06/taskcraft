@@ -27,6 +27,12 @@ import { createProject } from "@/actions/projects";
 import { PRIORITIES, DATE_GRANULARITIES, type DateGranularity } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { TeamWithProjects, UserLite } from "@/lib/types";
+import type { IssueStatusPresetDef } from "@/lib/project-status";
+import {
+  IssueWorkflowPicker,
+  initialWorkflowSelection,
+  type WorkflowSelection,
+} from "@/components/settings/issue-workflow";
 
 interface DraftMilestone {
   key: string;
@@ -81,11 +87,14 @@ function DatePickerField({
 export function CreateProjectDrawer({
   teams,
   users,
+  issueStatusPresets,
   defaultTeamId,
   trigger,
 }: {
   teams: TeamWithProjects[];
   users: UserLite[];
+  // Library the project's issue workflow is chosen from.
+  issueStatusPresets: IssueStatusPresetDef[];
   defaultTeamId?: string;
   trigger: React.ReactNode;
 }) {
@@ -102,6 +111,7 @@ export function CreateProjectDrawer({
   const [startDate, setStartDate] = React.useState<Date | undefined>();
   const [targetDate, setTargetDate] = React.useState<Date | undefined>();
   const [milestones, setMilestones] = React.useState<DraftMilestone[]>([]);
+  const [workflow, setWorkflow] = React.useState<WorkflowSelection>(() => initialWorkflowSelection(issueStatusPresets));
   const [msName, setMsName] = React.useState("");
   const [msDesc, setMsDesc] = React.useState("");
   const [editingKey, setEditingKey] = React.useState<string | null>(null);
@@ -124,6 +134,7 @@ export function CreateProjectDrawer({
     setPriority(PRIORITIES[0]);
     setStartDate(undefined);
     setTargetDate(undefined);
+    setWorkflow(initialWorkflowSelection(issueStatusPresets));
   }
 
   function upsertMilestone() {
@@ -170,6 +181,10 @@ export function CreateProjectDrawer({
       toast.error("Pick a project lead");
       return;
     }
+    if (workflow.presetIds.length === 0) {
+      toast.error("Choose at least one issue status");
+      return;
+    }
     setPending(mode);
     try {
       await createProject({
@@ -183,6 +198,8 @@ export function CreateProjectDrawer({
         priority,
         isDraft: mode === "draft",
         milestones: milestones.map((m) => ({ name: m.name, description: m.description })),
+        issueStatusPresetIds: workflow.presetIds,
+        defaultIssueStatusPresetId: workflow.defaultPresetId,
       });
       toast.success(mode === "draft" ? "Saved as draft" : "Project published");
       if (createMore) {
@@ -344,6 +361,17 @@ export function CreateProjectDrawer({
               <DatePickerField label="Start date" date={startDate} onChange={setStartDate} granularity={granularity} />
               <DatePickerField label="Target date" date={targetDate} onChange={setTargetDate} granularity={granularity} />
             </div>
+          </section>
+
+          <section className="flex flex-col gap-2 border-t border-border pt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Issue workflow</h3>
+            <p className="text-xs text-muted-foreground">The statuses (board columns) this project&apos;s issues move through.</p>
+            <IssueWorkflowPicker
+              presets={issueStatusPresets}
+              value={workflow}
+              onChange={setWorkflow}
+              disabled={!!pending}
+            />
           </section>
 
           <section className="flex flex-col gap-2 border-t border-border pt-4">

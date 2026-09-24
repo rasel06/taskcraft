@@ -19,7 +19,6 @@ const SECTIONS = [
     links: [
       { href: "/settings/issues/labels", label: "Labels" },
       { href: "/settings/issues/templates", label: "Templates" },
-      { href: "/settings/issues/statuses", label: "Statuses" },
       { href: "/settings/issues/slas", label: "SLAs" },
     ],
   },

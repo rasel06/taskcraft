@@ -163,3 +163,24 @@ body {
   background-color: var(--input);
   border-radius: 9999px;
 }
+
+/* Dialog scrim enter/exit. Tint and backdrop blur fade together so closing a
+   dialog doesn't flash the blurred page before it snaps back to sharp. */
+@keyframes dialog-scrim-in {
+  from {
+    background-color: transparent;
+    backdrop-filter: blur(0) saturate(1);
+  }
+}
+@keyframes dialog-scrim-out {
+  to {
+    background-color: transparent;
+    backdrop-filter: blur(0) saturate(1);
+  }
+}
+.dialog-scrim[data-state="open"] {
+  animation: dialog-scrim-in 160ms ease-out;
+}
+.dialog-scrim[data-state="closed"] {
+  animation: dialog-scrim-out 150ms ease-out forwards;
+}

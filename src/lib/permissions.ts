@@ -27,7 +27,7 @@ export const PERMISSIONS = [
   {
     key: "manage_issue_statuses",
     label: "Manage issue statuses",
-    description: "Manage the issue workflow (board columns) of every project; project leads/admins can always manage their own project",
+    description: "Manage the issue status presets and choose, order and remove each project's issue statuses (board columns)",
   },
   {
     key: "delete_issues",

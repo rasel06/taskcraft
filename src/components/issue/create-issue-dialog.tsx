@@ -112,7 +112,6 @@ export function CreateIssueDialog({
         titleRef.current?.focus();
       } else {
         setOpen(false);
-        resetAll();
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to create issue");
@@ -126,8 +125,10 @@ export function CreateIssueDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
+        // Reset when opening, not closing: clearing the form while the close
+        // animation plays makes the fading dialog flicker as its content jumps.
+        if (next) resetAll();
         setOpen(next);
-        if (!next) resetAll();
       }}
     >
       <DialogTrigger asChild>{trigger}</DialogTrigger>

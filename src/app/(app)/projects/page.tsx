@@ -1,7 +1,7 @@
 import { FolderKanban, Plus } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { getProjectsOverview, getVisibleTeams, getAllUsers, getProjectStatuses } from "@/lib/data";
+import { getProjectsOverview, getVisibleTeams, getAllUsers, getProjectStatuses, getIssueStatusPresets } from "@/lib/data";
 import { ProjectList } from "@/components/project/project-list";
 import { CreateProjectDrawer } from "@/components/project/create-project-drawer";
 import { Button } from "@/components/ui/button";
@@ -14,17 +14,20 @@ export default async function ProjectsPage() {
     getAllUsers(),
     getProjectStatuses(),
   ]);
+  const canCreate = can(user, "create_projects");
+  const issueStatusPresets = canCreate ? await getIssueStatusPresets() : [];
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <header className="flex items-center gap-2 border-b border-border px-5 py-3">
         <FolderKanban className="h-4 w-4 text-muted-foreground" />
         <h1 className="text-sm font-semibold text-foreground">Projects</h1>
-        {can(user, "create_projects") && (
+        {canCreate && (
           <div className="ml-auto">
             <CreateProjectDrawer
               teams={teams}
               users={users}
+              issueStatusPresets={issueStatusPresets}
               trigger={
                 <Button variant="primary" size="sm">
                   <Plus className="h-3.5 w-3.5" /> New project

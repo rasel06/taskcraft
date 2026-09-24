@@ -49,7 +49,7 @@ export function moveStatusId(ids: string[], fromId: string, toId: string): strin
 
 // Statuses in display order, with a local override applied immediately while a
 // reorder is saved, so a drag-and-drop doesn't snap back before the refresh.
-export function useOptimisticStatusOrder(statuses: ProjectStatusDef[]) {
+export function useOptimisticStatusOrder<T extends { id: string }>(statuses: T[]) {
   const [order, setOrder] = React.useState<string[] | null>(null);
   const serverKey = statuses.map((s) => s.id).join(",");
   const [lastServerKey, setLastServerKey] = React.useState(serverKey);
@@ -61,7 +61,7 @@ export function useOptimisticStatusOrder(statuses: ProjectStatusDef[]) {
   const ordered = React.useMemo(() => {
     if (!order) return statuses;
     const byId = new Map(statuses.map((s) => [s.id, s]));
-    const list = order.map((id) => byId.get(id)).filter((s): s is ProjectStatusDef => !!s);
+    const list = order.map((id) => byId.get(id)).filter((s): s is T => !!s);
     return list.length === statuses.length ? list : statuses;
   }, [order, statuses]);
   return { ordered, setOrder };
@@ -298,10 +298,17 @@ export function StatusFormDialog({
   trigger,
   open: openProp,
   onOpenChange,
+  save,
+  title,
+  description,
 }: {
   kind: StatusKind;
   projectId?: string | null;
-  status?: ProjectStatusDef;
+  status?: Pick<ProjectStatusDef, "id" | "name" | "color" | "category">;
+  // Overrides the default create/update action (used by the preset library).
+  save?: (input: { name: string; category: ProjectStatusCategory; color: string }) => Promise<unknown>;
+  title?: string;
+  description?: string;
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -341,7 +348,10 @@ export function StatusFormDialog({
     e.preventDefault();
     setPending(true);
     try {
-      if (isEdit) {
+      if (save) {
+        await save({ name, category, color });
+        toast.success(isEdit ? "Status updated" : "Status created");
+      } else if (isEdit) {
         await updateStatus(kind, status.id, { name, category, color }, projectId);
         toast.success("Status updated");
       } else {
@@ -372,10 +382,11 @@ export function StatusFormDialog({
       <DialogContent>
         <form onSubmit={submit}>
           <DialogHeader>
-            <DialogTitle>{isEdit ? "Edit status" : `New ${kind} status`}</DialogTitle>
-            {isEdit && (
+            <DialogTitle>{title ?? (isEdit ? "Edit status" : `New ${kind} status`)}</DialogTitle>
+            {(description || isEdit) && (
               <DialogDescription>
-                Renaming updates every {kind} currently on this status{kind === "issue" ? " in this project" : ""}.
+                {description ??
+                  `Renaming updates every ${kind} currently on this status${kind === "issue" ? " in this project" : ""}.`}
               </DialogDescription>
             )}
           </DialogHeader>
@@ -476,9 +487,12 @@ export function DeleteStatusDialog({
   trigger,
   open: openProp,
   onOpenChange,
+  remove = false,
 }: {
   kind: StatusKind;
   projectId?: string | null;
+  // "Remove from this project" wording (the status stays in the preset library).
+  remove?: boolean;
   status: ProjectStatusDef;
   statuses: ProjectStatusDef[];
   usage?: number;
@@ -511,7 +525,9 @@ export function DeleteStatusDialog({
     try {
       const result = await deleteStatus(kind, status.id, needsReplacement ? replacementId : null, projectId);
       toast.success(
-        result.moved > 0 ? `${status.name} deleted · ${plural(kind, result.moved)} moved to ${result.to}` : `${status.name} deleted`,
+        result.moved > 0
+          ? `${status.name} ${remove ? "removed" : "deleted"} · ${plural(kind, result.moved)} moved to ${result.to}`
+          : `${status.name} ${remove ? "removed" : "deleted"}`,
       );
       setOpen(false);
       router.refresh();
@@ -528,14 +544,18 @@ export function DeleteStatusDialog({
       ? `Any ${NOUN[kind][1]} on this status will be moved to the status you choose.`
       : usage > 0
         ? `${plural(kind, usage)} ${usage === 1 ? "is" : "are"} on this status. Choose where to move ${usage === 1 ? "it" : "them"}.`
-        : `No ${NOUN[kind][1]} use this status. This can't be undone.`);
+        : remove
+          ? `No ${NOUN[kind][1]} use this status. It stays available in the status presets.`
+          : `No ${NOUN[kind][1]} use this status. This can't be undone.`);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete &ldquo;{status.name}&rdquo;?</DialogTitle>
+          <DialogTitle>
+            {remove ? "Remove" : "Delete"} &ldquo;{status.name}&rdquo;{remove ? " from this project" : ""}?
+          </DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         {!blocked && needsReplacement && (
@@ -561,7 +581,15 @@ export function DeleteStatusDialog({
           </Button>
           {!blocked && (
             <Button variant="destructive" onClick={handleDelete} disabled={pending || (needsReplacement && !replacementId)}>
-              {pending ? "Deleting..." : needsReplacement ? "Move & delete" : "Delete status"}
+              {pending
+                ? remove
+                  ? "Removing..."
+                  : "Deleting..."
+                : needsReplacement
+                  ? `Move & ${remove ? "remove" : "delete"}`
+                  : remove
+                    ? "Remove status"
+                    : "Delete status"}
             </Button>
           )}
         </DialogFooter>

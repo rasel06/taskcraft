@@ -15,6 +15,7 @@ import { CreateIssueDialog } from "@/components/issue/create-issue-dialog";
 import { HelpDialog } from "@/components/help-dialog";
 import { Button } from "@/components/ui/button";
 import type { TeamWithProjects, UserLite } from "@/lib/types";
+import type { IssueStatusPresetDef } from "@/lib/project-status";
 
 const CORE_LINKS = [
   { href: "/inbox", label: "Inbox", icon: Inbox },
@@ -32,11 +33,14 @@ export function Sidebar({
   users,
   teams,
   permissions,
+  issueStatusPresets,
 }: {
   currentUser: UserLite | null;
   users: UserLite[];
   teams: TeamWithProjects[];
   permissions?: { canManageMembers: boolean; canViewAuditLog: boolean; canCreateProjects: boolean };
+  // Preset library for the New Project workflow picker (only loaded for creators).
+  issueStatusPresets?: IssueStatusPresetDef[];
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = React.useState(false);
@@ -140,6 +144,7 @@ export function Sidebar({
             <CreateProjectDrawer
               teams={teams}
               users={users}
+              issueStatusPresets={issueStatusPresets ?? []}
               trigger={
                 collapsed ? (
                   <Button variant="outline" size="sm" className="w-full px-0" title="New project">
