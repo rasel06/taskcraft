@@ -6,7 +6,33 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const Dialog = DialogPrimitive.Root;
-const DialogTrigger = DialogPrimitive.Trigger;
+
+const REACT_LAZY_TYPE = Symbol.for("react.lazy");
+
+type LazyNode = { $$typeof: symbol; _payload: PromiseLike<unknown> };
+
+function isLazyNode(node: unknown): node is LazyNode {
+  return typeof node === "object" && node !== null && (node as LazyNode).$$typeof === REACT_LAZY_TYPE;
+}
+
+// A trigger element passed down from a Server Component (e.g. `trigger={<Button/>}`)
+// can arrive as a lazy reference nested inside another lazy reference. Radix's
+// Slot only unwraps one level and then throws "failed to slot onto its
+// children", so unwrap all levels before handing the element to `asChild`.
+const DialogTrigger = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Trigger>
+>(({ children, ...props }, ref) => {
+  let child: unknown = children;
+  while (isLazyNode(child)) child = React.use(child._payload);
+  return (
+    <DialogPrimitive.Trigger ref={ref} {...props}>
+      {child as React.ReactNode}
+    </DialogPrimitive.Trigger>
+  );
+});
+DialogTrigger.displayName = DialogPrimitive.Trigger.displayName;
+
 const DialogPortal = DialogPrimitive.Portal;
 const DialogClose = DialogPrimitive.Close;
 
