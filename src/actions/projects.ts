@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requireProjectManage, getCurrentUser } from "@/lib/auth";
+import { requireProjectManage, getCurrentUser, requirePermission } from "@/lib/auth";
 import { dispatchNotification, projectRecipients, appUrl } from "@/lib/notify";
 import { getProjectStatuses } from "@/lib/data";
 import { formatProjectChanges, type FieldChange } from "@/lib/notify/format";
@@ -44,6 +44,8 @@ export interface CreateProjectInput {
 }
 
 export async function createProject(input: CreateProjectInput) {
+  // Only roles with "create_projects" (the seeded Admin) may create projects.
+  await requirePermission("create_projects");
   const name = input.name.trim();
   if (!name) throw new Error("Project name is required");
   if (!input.teamId) throw new Error("Team is required");

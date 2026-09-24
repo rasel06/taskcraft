@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, canAccessTeam } from "@/lib/auth";
-import { getTeamIssues, getCycleIssues, getClosedIssueStatusNames } from "@/lib/data";
+import { getTeamIssues, getCycleIssues, getClosedIssueStatusLookup } from "@/lib/data";
 import { AccessDenied } from "@/components/shared/access-denied";
 import { Board } from "@/components/board/board";
 import { CycleFormDialog } from "@/components/team/cycle-form-dialog";
@@ -47,12 +47,12 @@ export default async function CycleDetailPage({
     );
   }
 
-  const [cycleIssues, teamIssues, closedStatuses] = await Promise.all([
+  const [cycleIssues, teamIssues] = await Promise.all([
     getCycleIssues(cycleId, user?.id),
     getTeamIssues(teamId, user?.id),
-    getClosedIssueStatusNames(),
   ]);
-  const closedCount = cycleIssues.filter((i) => closedStatuses.has(i.status)).length;
+  const isClosed = await getClosedIssueStatusLookup(cycleIssues.map((i) => i.projectId));
+  const closedCount = cycleIssues.filter((i) => isClosed(i.projectId, i.status)).length;
   const availableIssues = teamIssues.filter((i) => i.cycleId !== cycleId);
   const status = cycleStatus(cycle.startDate, cycle.targetDate);
   const label = cycle.name?.trim() || `Cycle ${cycle.number}`;

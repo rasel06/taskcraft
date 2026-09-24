@@ -18,6 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { ProjectStatusIcon } from "@/components/shared/project-status-icon";
 import { PriorityIcon } from "@/components/shared/priority-icon";
+import { TeamIconBadge, teamGroupClass } from "@/components/shared/team-icon";
+import { cn } from "@/lib/utils";
 import { PRIORITIES } from "@/lib/constants";
 import type { ProjectStatusDef } from "@/lib/project-status";
 import { formatDate } from "@/lib/utils";
@@ -244,21 +246,38 @@ export function ProjectList({ projects, statuses }: { projects: ProjectOverview[
             <p className="text-sm">No projects found</p>
           </div>
         ) : (
-          groups.map(([key, list]) => (
+          groups.map(([key, list]) => {
+            // Team groups are drawn in the team's color; rows always carry
+            // their team's color as a left strip so teams stay recognisable
+            // in the status / priority / flat views too.
+            const team = groupBy === "team" ? list[0]?.team : undefined;
+            const teamStyle = team ? teamGroupClass(team.color) : undefined;
+            return (
             <div key={key} className="flex flex-col">
               {groupBy !== "none" && (
-                <div className="flex items-center gap-1.5 border-b border-border bg-muted/30 px-5 py-1.5 text-xs font-medium text-muted-foreground">
+                <div
+                  className={cn(
+                    "flex items-center gap-1.5 border-b border-border px-5 py-1.5 text-xs font-medium",
+                    team ? cn("border-l-4 font-semibold", teamStyle!.header, teamStyle!.accent) : "bg-muted/30 text-muted-foreground",
+                  )}
+                >
+                  {team && (
+                    <TeamIconBadge icon={team.icon} color={team.color} className="h-5 w-5 rounded" iconClassName="h-3 w-3" />
+                  )}
                   {groupBy === "status" && <ProjectStatusIcon status={key} statuses={statuses} />}
                   {groupBy === "priority" && <PriorityIcon priority={key} />}
                   {key}
-                  <span className="ml-auto text-faint-foreground">{list.length}</span>
+                  <span className={cn("ml-auto", team ? "opacity-70" : "text-faint-foreground")}>{list.length}</span>
                 </div>
               )}
               {list.map((p) => (
                 <Link
                   key={p.id}
                   href={`/projects/${p.id}`}
-                  className="flex items-center gap-3 border-b border-border px-5 py-2.5 hover:bg-muted/40"
+                  className={cn(
+                    "flex items-center gap-3 border-b border-l-4 border-border px-5 py-2.5 hover:bg-muted/40",
+                    teamGroupClass(p.team.color).accent,
+                  )}
                 >
                   <ProjectStatusIcon status={p.status} statuses={statuses} />
                   <div className="min-w-0 flex-1">
@@ -283,7 +302,8 @@ export function ProjectList({ projects, statuses }: { projects: ProjectOverview[
                 </Link>
               ))}
             </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

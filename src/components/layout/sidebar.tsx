@@ -36,7 +36,7 @@ export function Sidebar({
   currentUser: UserLite | null;
   users: UserLite[];
   teams: TeamWithProjects[];
-  permissions?: { canManageMembers: boolean; canViewAuditLog: boolean };
+  permissions?: { canManageMembers: boolean; canViewAuditLog: boolean; canCreateProjects: boolean };
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = React.useState(false);
@@ -136,21 +136,23 @@ export function Sidebar({
               )
             }
           />
-          <CreateProjectDrawer
-            teams={teams}
-            users={users}
-            trigger={
-              collapsed ? (
-                <Button variant="outline" size="sm" className="w-full px-0" title="New project">
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
-              ) : (
-                <Button variant="outline" size="sm" className="flex-1">
-                  <Plus className="h-3.5 w-3.5" /> Project
-                </Button>
-              )
-            }
-          />
+          {permissions?.canCreateProjects && (
+            <CreateProjectDrawer
+              teams={teams}
+              users={users}
+              trigger={
+                collapsed ? (
+                  <Button variant="outline" size="sm" className="w-full px-0" title="New project">
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                ) : (
+                  <Button variant="outline" size="sm" className="flex-1">
+                    <Plus className="h-3.5 w-3.5" /> Project
+                  </Button>
+                )
+              }
+            />
+          )}
         </div>
       </div>
 

@@ -206,3 +206,78 @@ export async function requireProjectManage(projectId: string) {
 
   return user;
 }
+
+// A project's issue workflow can be managed by anyone with the workspace
+// "manage_issue_statuses" permission, or by that project's lead / ADMIN member.
+export async function canManageIssueStatuses(projectId: string, user: AuthUser) {
+  if (!user) return false;
+  if (can(user, "manage_issue_statuses")) return true;
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { leadId: true, members: { where: { userId: user.id }, select: { role: true } } },
+  });
+  if (!project) return false;
+  return project.leadId === user.id || project.members.some((m) => m.role === "ADMIN");
+}
+
+// Project ids (among `projectIds`) whose issue workflow `user` can manage.
+export async function manageableIssueStatusProjectIds(projectIds: string[], user: AuthUser): Promise<string[]> {
+  if (!user || projectIds.length === 0) return [];
+  if (can(user, "manage_issue_statuses")) return projectIds;
+
+  const projects = await prisma.project.findMany({
+    where: {
+      id: { in: projectIds },
+      OR: [{ leadId: user.id }, { members: { some: { userId: user.id, role: "ADMIN" } } }],
+    },
+    select: { id: true },
+  });
+  return projects.map((p) => p.id);
+}
+
+export interface IssueEditAccess {
+  canEdit: boolean;
+  reason: string | null;
+}
+
+// Who may edit an issue:
+// - a workspace admin (manage_teams permission, same marker as canManageProject),
+// - the project's lead or the leader of the project's team,
+// - the issue's creator, but only until someone else has posted in its discussion.
+export async function getIssueEditAccess(issueId: string, user: AuthUser): Promise<IssueEditAccess> {
+  if (!user) return { canEdit: false, reason: "Not signed in" };
+
+  const issue = await prisma.issue.findUnique({
+    where: { id: issueId },
+    select: { creatorId: true, project: { select: { leadId: true, team: { select: { leadId: true } } } } },
+  });
+  if (!issue) return { canEdit: false, reason: "Issue not found" };
+
+  if (can(user, "manage_teams")) return { canEdit: true, reason: null };
+  if (issue.project.leadId === user.id || issue.project.team.leadId === user.id) return { canEdit: true, reason: null };
+
+  if (issue.creatorId && issue.creatorId === user.id) {
+    // Comments from anyone other than the creator (including deleted users) lock it.
+    const othersInDiscussion = await prisma.issueComment.count({
+      where: { issueId, OR: [{ userId: { not: user.id } }, { userId: null }] },
+    });
+    if (othersInDiscussion === 0) return { canEdit: true, reason: null };
+    return {
+      canEdit: false,
+      reason: "The discussion has started, so only the project/team lead or an admin can edit this issue now.",
+    };
+  }
+
+  return {
+    canEdit: false,
+    reason: "Only the issue's creator (before others join the discussion), the project/team lead or an admin can edit this issue.",
+  };
+}
+
+export async function requireIssueEdit(issueId: string) {
+  const user = await getCurrentUser();
+  const access = await getIssueEditAccess(issueId, user);
+  if (!access.canEdit) throw new Error(access.reason ?? "You can't edit this issue");
+  return user;
+}

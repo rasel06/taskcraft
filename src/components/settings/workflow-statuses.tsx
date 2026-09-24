@@ -67,8 +67,9 @@ export function useOptimisticStatusOrder(statuses: ProjectStatusDef[]) {
   return { ordered, setOrder };
 }
 
-// Shared by the settings list and the board column menus.
-export function useStatusMutations(kind: StatusKind) {
+// Shared by the settings list and the board column menus. `projectId` scopes
+// issue statuses to one project's workflow (unused for project statuses).
+export function useStatusMutations(kind: StatusKind, projectId?: string | null) {
   const router = useRouter();
   const [busy, setBusy] = React.useState(false);
 
@@ -95,19 +96,20 @@ export function useStatusMutations(kind: StatusKind) {
       const next = [...statuses];
       const [item] = next.splice(index, 1);
       next.splice(target, 0, item);
-      return run(() => reorderStatuses(kind, next.map((s) => s.id)), "Order updated");
+      return run(() => reorderStatuses(kind, next.map((s) => s.id), projectId), "Order updated");
     },
-    [kind, run],
+    [kind, projectId, run],
   );
 
   const reorder = React.useCallback(
-    (orderedIds: string[]) => run(() => reorderStatuses(kind, orderedIds), "Order updated"),
-    [kind, run],
+    (orderedIds: string[]) => run(() => reorderStatuses(kind, orderedIds, projectId), "Order updated"),
+    [kind, projectId, run],
   );
 
   const makeDefault = React.useCallback(
-    (status: ProjectStatusDef) => run(() => setDefaultStatus(kind, status.id), `${status.name} is now the default`),
-    [kind, run],
+    (status: ProjectStatusDef) =>
+      run(() => setDefaultStatus(kind, status.id, projectId), `${status.name} is now the default`),
+    [kind, projectId, run],
   );
 
   return { busy, move, reorder, makeDefault };
@@ -115,16 +117,18 @@ export function useStatusMutations(kind: StatusKind) {
 
 export function WorkflowStatusesManager({
   kind,
+  projectId,
   statuses,
   usage,
   canManage,
 }: {
   kind: StatusKind;
+  projectId?: string | null;
   statuses: ProjectStatusDef[];
   usage: Record<string, number>;
   canManage: boolean;
 }) {
-  const { busy, move, reorder, makeDefault } = useStatusMutations(kind);
+  const { busy, move, reorder, makeDefault } = useStatusMutations(kind, projectId);
   const { ordered, setOrder } = useOptimisticStatusOrder(statuses);
   const [dragId, setDragId] = React.useState<string | null>(null);
   const [overId, setOverId] = React.useState<string | null>(null);
@@ -149,6 +153,7 @@ export function WorkflowStatusesManager({
         <div className="flex justify-end">
           <StatusFormDialog
             kind={kind}
+            projectId={projectId}
             trigger={
               <Button variant="primary" size="sm">
                 <Plus className="h-3.5 w-3.5" /> New status
@@ -226,6 +231,7 @@ export function WorkflowStatusesManager({
                   </IconButton>
                   <StatusFormDialog
                     kind={kind}
+                    projectId={projectId}
                     status={s}
                     trigger={
                       <IconButton title="Edit status">
@@ -235,6 +241,7 @@ export function WorkflowStatusesManager({
                   />
                   <DeleteStatusDialog
                     kind={kind}
+                    projectId={projectId}
                     status={s}
                     statuses={ordered}
                     usage={count}
@@ -255,7 +262,10 @@ export function WorkflowStatusesManager({
       )}
       {!canManage && (
         <p className="text-xs text-faint-foreground">
-          You can view the workflow. Editing needs the &ldquo;Manage {kind} statuses&rdquo; permission.
+          You can view the workflow.{" "}
+          {kind === "issue"
+            ? "Editing is limited to admins and this project's lead or admin members."
+            : "Editing needs the \u201cManage project statuses\u201d permission."}
         </p>
       )}
     </div>
@@ -283,12 +293,14 @@ IconButton.displayName = "IconButton";
 // with `open` / `onOpenChange` (used from the board's column menu).
 export function StatusFormDialog({
   kind,
+  projectId,
   status,
   trigger,
   open: openProp,
   onOpenChange,
 }: {
   kind: StatusKind;
+  projectId?: string | null;
   status?: ProjectStatusDef;
   trigger?: React.ReactNode;
   open?: boolean;
@@ -330,10 +342,10 @@ export function StatusFormDialog({
     setPending(true);
     try {
       if (isEdit) {
-        await updateStatus(kind, status.id, { name, category, color });
+        await updateStatus(kind, status.id, { name, category, color }, projectId);
         toast.success("Status updated");
       } else {
-        await createStatus(kind, { name, category, color });
+        await createStatus(kind, { name, category, color }, projectId);
         toast.success("Status created");
       }
       setOpen(false);
@@ -362,7 +374,9 @@ export function StatusFormDialog({
           <DialogHeader>
             <DialogTitle>{isEdit ? "Edit status" : `New ${kind} status`}</DialogTitle>
             {isEdit && (
-              <DialogDescription>Renaming updates every {kind} currently on this status.</DialogDescription>
+              <DialogDescription>
+                Renaming updates every {kind} currently on this status{kind === "issue" ? " in this project" : ""}.
+              </DialogDescription>
             )}
           </DialogHeader>
           <div className="flex flex-col gap-4 px-5 py-4">
@@ -455,6 +469,7 @@ export function StatusFormDialog({
 // board); the replacement picker is then always shown and the server decides.
 export function DeleteStatusDialog({
   kind,
+  projectId,
   status,
   statuses,
   usage,
@@ -463,6 +478,7 @@ export function DeleteStatusDialog({
   onOpenChange,
 }: {
   kind: StatusKind;
+  projectId?: string | null;
   status: ProjectStatusDef;
   statuses: ProjectStatusDef[];
   usage?: number;
@@ -493,7 +509,7 @@ export function DeleteStatusDialog({
   async function handleDelete() {
     setPending(true);
     try {
-      const result = await deleteStatus(kind, status.id, needsReplacement ? replacementId : null);
+      const result = await deleteStatus(kind, status.id, needsReplacement ? replacementId : null, projectId);
       toast.success(
         result.moved > 0 ? `${status.name} deleted · ${plural(kind, result.moved)} moved to ${result.to}` : `${status.name} deleted`,
       );

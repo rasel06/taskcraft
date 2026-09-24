@@ -19,7 +19,7 @@ export function IssueRow({ issue, showProject }: { issue: IssueView; showProject
         priorityStyle(issue.priority).accent,
       )}
     >
-      <StatusIcon status={issue.status} />
+      <StatusIcon status={issue.status} projectId={issue.projectId} />
       <span className="w-16 shrink-0 text-muted-foreground">{issue.id}</span>
       <span className="w-28 shrink-0">
         <PriorityBadge priority={issue.priority} />

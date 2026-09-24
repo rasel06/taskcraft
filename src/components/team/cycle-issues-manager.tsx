@@ -54,7 +54,7 @@ export function CycleIssuesManager({
         </SelectTrigger>
         <SelectContent>
           {availableIssues.map((i) => (
-            <SelectItem key={i.id} value={i.id} icon={<StatusIcon status={i.status} />}>
+            <SelectItem key={i.id} value={i.id} icon={<StatusIcon status={i.status} projectId={i.projectId} />}>
               {i.id} · {i.title}
             </SelectItem>
           ))}
@@ -68,7 +68,7 @@ export function CycleIssuesManager({
               key={i.id}
               className="flex items-center gap-2 rounded-md border border-border px-2.5 py-1.5 text-sm"
             >
-              <StatusIcon status={i.status} />
+              <StatusIcon status={i.status} projectId={i.projectId} />
               <span className="text-faint-foreground">{i.id}</span>
               <span className="min-w-0 flex-1 truncate text-foreground">{i.title}</span>
               <PriorityIcon priority={i.priority} />

@@ -101,6 +101,27 @@ const TEAM_BG_CLASS: Record<string, string> = {
   pink: "bg-pink-100 dark:bg-pink-950",
 };
 
+// Group-level styling in a team's color: a tinted header and a left accent
+// strip for rows belonging to the team. Static strings so Tailwind keeps them.
+const TEAM_GROUP_CLASS: Record<string, { header: string; accent: string }> = {
+  slate: { header: "bg-slate-50 text-slate-800 dark:bg-slate-900/60 dark:text-slate-200", accent: "border-l-slate-400" },
+  red: { header: "bg-red-50 text-red-800 dark:bg-red-950/50 dark:text-red-200", accent: "border-l-red-500" },
+  orange: { header: "bg-orange-50 text-orange-800 dark:bg-orange-950/50 dark:text-orange-200", accent: "border-l-orange-500" },
+  amber: { header: "bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200", accent: "border-l-amber-500" },
+  emerald: { header: "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200", accent: "border-l-emerald-500" },
+  teal: { header: "bg-teal-50 text-teal-800 dark:bg-teal-950/50 dark:text-teal-200", accent: "border-l-teal-500" },
+  cyan: { header: "bg-cyan-50 text-cyan-800 dark:bg-cyan-950/50 dark:text-cyan-200", accent: "border-l-cyan-500" },
+  blue: { header: "bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-200", accent: "border-l-blue-500" },
+  indigo: { header: "bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200", accent: "border-l-indigo-500" },
+  violet: { header: "bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-200", accent: "border-l-violet-500" },
+  purple: { header: "bg-purple-50 text-purple-800 dark:bg-purple-950/50 dark:text-purple-200", accent: "border-l-purple-500" },
+  pink: { header: "bg-pink-50 text-pink-800 dark:bg-pink-950/50 dark:text-pink-200", accent: "border-l-pink-500" },
+};
+
+export function teamGroupClass(color?: string) {
+  return TEAM_GROUP_CLASS[color && color in TEAM_GROUP_CLASS ? color : "indigo"];
+}
+
 export function teamTextClass(color?: string) {
   const colorKey = color && TEAM_COLORS.some((c) => c.key === color) ? color : "indigo";
   return TEAM_TEXT_CLASS[colorKey];

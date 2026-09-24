@@ -125,7 +125,7 @@ export async function getVisibleProjects(user: AuthUser, teamId?: string) {
     },
     orderBy: { startDate: "asc" },
     include: {
-      team: { select: { id: true, name: true, identifier: true } },
+      team: { select: { id: true, name: true, identifier: true, color: true, icon: true } },
       lead: { select: { id: true, name: true, avatarUrl: true } },
       _count: { select: { issues: true } },
     },
@@ -210,9 +210,9 @@ export async function getTeamCycles(teamId: string): Promise<CycleOverview[]> {
   const cycles = await prisma.cycle.findMany({
     where: { teamId },
     orderBy: { startDate: "desc" },
-    include: { issues: { select: { status: true } } },
+    include: { issues: { select: { status: true, projectId: true } } },
   });
-  const closed = await getClosedIssueStatusNames();
+  const isClosed = await getClosedIssueStatusLookup(cycles.flatMap((c) => c.issues.map((i) => i.projectId)));
   return cycles.map((c) => ({
     id: c.id,
     teamId: c.teamId,
@@ -222,7 +222,7 @@ export async function getTeamCycles(teamId: string): Promise<CycleOverview[]> {
     targetDate: c.targetDate.toISOString(),
     status: cycleStatus(c.startDate, c.targetDate),
     issueCount: c.issues.length,
-    completedCount: c.issues.filter((i) => closed.has(i.status)).length,
+    completedCount: c.issues.filter((i) => isClosed(i.projectId, i.status)).length,
   }));
 }
 
@@ -281,12 +281,13 @@ export async function getProjectsStatusReport(user: AuthUser): Promise<ProjectSt
     },
   });
 
-  const issueStatuses = await getIssueStatuses();
-  const closedNames = new Set(issueStatuses.filter((s) => isClosedCategory(s.category)).map((s) => s.name));
+  const statusesByProject = await getIssueStatusesByProject(projects.map((p) => p.id));
 
   return projects.map((p) => {
+    const workflow = statusesByProject[p.id] ?? [];
+    const closedNames = new Set(workflow.filter((s) => isClosedCategory(s.category)).map((s) => s.name));
     const counts: Record<string, number> = {};
-    for (const s of issueStatuses) counts[s.name] = 0;
+    for (const s of workflow) counts[s.name] = 0;
     for (const i of p.issues) counts[i.status] = (counts[i.status] ?? 0) + 1;
     const total = p.issues.length;
     const closed = p.issues.filter((i) => closedNames.has(i.status)).length;
@@ -383,24 +384,84 @@ function toStatusDef(r: { id: string; name: string; color: string; category: str
   };
 }
 
-// Issue workflow statuses (board columns), database driven. Seeded with the
-// original five columns the first time the table is read while empty.
-export async function getIssueStatuses(): Promise<IssueStatusDef[]> {
-  let rows = await prisma.issueStatus.findMany({ orderBy: [{ position: "asc" }, { createdAt: "asc" }] });
-  if (rows.length === 0) {
-    await prisma.issueStatus.createMany({ data: DEFAULT_ISSUE_STATUSES });
-    rows = await prisma.issueStatus.findMany({ orderBy: [{ position: "asc" }, { createdAt: "asc" }] });
+// Issue workflow statuses are per project. A project without any rows (new, or
+// created before per-project workflows) gets the default five columns.
+async function ensureIssueStatuses(projectIds: string[]) {
+  if (projectIds.length === 0) return;
+  const seeded = await prisma.issueStatus.groupBy({ by: ["projectId"], where: { projectId: { in: projectIds } } });
+  const have = new Set(seeded.map((g) => g.projectId));
+  for (const projectId of projectIds.filter((id) => !have.has(id))) {
+    try {
+      await prisma.issueStatus.createMany({ data: DEFAULT_ISSUE_STATUSES.map((d) => ({ ...d, projectId })) });
+    } catch (err) {
+      // A concurrent request seeded the same project first; its rows are fine.
+      if ((err as { code?: string }).code !== "P2002") throw err;
+    }
   }
+}
+
+const ISSUE_STATUS_ORDER = [{ position: "asc" as const }, { createdAt: "asc" as const }];
+
+export async function getIssueStatuses(projectId: string): Promise<IssueStatusDef[]> {
+  await ensureIssueStatuses([projectId]);
+  const rows = await prisma.issueStatus.findMany({ where: { projectId }, orderBy: ISSUE_STATUS_ORDER });
   return rows.map(toStatusDef);
 }
 
-export async function getIssueStatusUsage(): Promise<Record<string, number>> {
-  const groups = await prisma.issue.groupBy({ by: ["status"], _count: { _all: true } });
+// Workflows for many projects at once, keyed by project id.
+export async function getIssueStatusesByProject(projectIds: string[]): Promise<Record<string, IssueStatusDef[]>> {
+  await ensureIssueStatuses(projectIds);
+  const rows = await prisma.issueStatus.findMany({ where: { projectId: { in: projectIds } }, orderBy: ISSUE_STATUS_ORDER });
+  const byProject: Record<string, IssueStatusDef[]> = Object.fromEntries(projectIds.map((id) => [id, []]));
+  for (const r of rows) byProject[r.projectId].push(toStatusDef(r));
+  return byProject;
+}
+
+export async function getIssueStatusUsage(projectId: string): Promise<Record<string, number>> {
+  const groups = await prisma.issue.groupBy({ by: ["status"], where: { projectId }, _count: { _all: true } });
   return Object.fromEntries(groups.map((g) => [g.status, g._count._all]));
 }
 
-// Names of statuses whose category counts as closed (completed or canceled).
-export async function getClosedIssueStatusNames(): Promise<Set<string>> {
-  const statuses = await getIssueStatuses();
-  return new Set(statuses.filter((s) => isClosedCategory(s.category)).map((s) => s.name));
+// Whether an issue's status counts as closed (completed or canceled category)
+// in its own project's workflow.
+export async function getClosedIssueStatusLookup(projectIds: string[]): Promise<(projectId: string, status: string) => boolean> {
+  const byProject = await getIssueStatusesByProject(Array.from(new Set(projectIds)));
+  const closed = new Set(
+    Object.entries(byProject).flatMap(([projectId, list]) =>
+      list.filter((s) => isClosedCategory(s.category)).map((s) => `${projectId}\u0000${s.name}`),
+    ),
+  );
+  return (projectId, status) => closed.has(`${projectId}\u0000${status}`);
+}
+
+// Names for the ids stored in issue activity values: assignee user ids,
+// milestone ids and cycle ids. Deleted records simply have no entry.
+export async function getActivityReferenceNames(
+  activity: { field: string; fromValue: string | null; toValue: string | null }[],
+): Promise<Record<string, string>> {
+  const userIds = new Set<string>();
+  const milestoneIds = new Set<string>();
+  const cycleIds = new Set<string>();
+  for (const a of activity) {
+    for (const v of [a.fromValue, a.toValue]) {
+      if (!v) continue;
+      if (a.field === "assignees") v.split(",").filter(Boolean).forEach((id) => userIds.add(id));
+      if (a.field === "milestoneId") milestoneIds.add(v);
+      if (a.field === "cycleId") cycleIds.add(v);
+    }
+  }
+  const [users, milestones, cycles] = await Promise.all([
+    userIds.size ? prisma.user.findMany({ where: { id: { in: [...userIds] } }, select: { id: true, name: true } }) : [],
+    milestoneIds.size
+      ? prisma.milestone.findMany({ where: { id: { in: [...milestoneIds] } }, select: { id: true, name: true } })
+      : [],
+    cycleIds.size
+      ? prisma.cycle.findMany({ where: { id: { in: [...cycleIds] } }, select: { id: true, name: true, number: true } })
+      : [],
+  ]);
+  const names: Record<string, string> = {};
+  for (const u of users) names[u.id] = u.name;
+  for (const m of milestones) names[m.id] = m.name;
+  for (const c of cycles) names[c.id] = c.name?.trim() || `Cycle ${c.number}`;
+  return names;
 }

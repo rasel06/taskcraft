@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, canAccessProject } from "@/lib/auth";
-import { getProjectIssues, getAllUsers, getProjectStatuses } from "@/lib/data";
+import { getCurrentUser, canAccessProject, canManageIssueStatuses, getIssueEditAccess } from "@/lib/auth";
+import { getProjectIssues, getAllUsers, getProjectStatuses, getIssueStatuses, getActivityReferenceNames } from "@/lib/data";
+import { ProjectIssueStatusesProvider } from "@/components/shared/issue-statuses-context";
 import { can } from "@/lib/permissions";
 import { AccessDenied } from "@/components/shared/access-denied";
 import { Board } from "@/components/board/board";
@@ -49,7 +50,13 @@ export default async function ProjectPage({
     );
   }
 
-  const [issues, users, statuses] = await Promise.all([getProjectIssues(projectId, user?.id), getAllUsers(), getProjectStatuses()]);
+  const [issues, users, statuses, issueStatuses, canManageStatuses] = await Promise.all([
+    getProjectIssues(projectId, user?.id),
+    getAllUsers(),
+    getProjectStatuses(),
+    getIssueStatuses(projectId),
+    canManageIssueStatuses(projectId, user),
+  ]);
   const selectedIssue = issueId ? issues.find((i) => i.id === issueId) : undefined;
   const fullSelectedIssue = selectedIssue
     ? await prisma.issue.findUnique({
@@ -67,8 +74,12 @@ export default async function ProjectPage({
         },
       })
     : null;
+  const [editAccess, activityNames] = fullSelectedIssue
+    ? await Promise.all([getIssueEditAccess(fullSelectedIssue.id, user), getActivityReferenceNames(fullSelectedIssue.activity)])
+    : [null, {}];
 
   return (
+    <ProjectIssueStatusesProvider projectId={projectId} statuses={issueStatuses} canManage={canManageStatuses}>
     <div className="flex flex-1 overflow-hidden">
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex flex-col gap-2 border-b border-border px-5 py-3">
@@ -109,7 +120,7 @@ export default async function ProjectPage({
             )}
           </div>
         </header>
-        <Board issues={issues} />
+        <Board issues={issues} projectId={project.id} />
       </div>
 
       <aside className="hidden w-72 shrink-0 flex-col gap-4 overflow-y-auto border-l border-border p-4 lg:flex">
@@ -127,10 +138,11 @@ export default async function ProjectPage({
 
       {fullSelectedIssue && (
         <IssueDetailModal
-          key={`${fullSelectedIssue.id}:${view ?? "detail"}`}
+          key={fullSelectedIssue.id}
           issue={{
             id: fullSelectedIssue.id,
             projectId: fullSelectedIssue.projectId,
+            projectName: project.name,
             title: fullSelectedIssue.title,
             description: fullSelectedIssue.description,
             status: fullSelectedIssue.status,
@@ -148,6 +160,7 @@ export default async function ProjectPage({
               createdAt: a.createdAt.toISOString(),
               user: a.user,
             })),
+            activityNames,
             comments: fullSelectedIssue.comments.map((c) => ({
               id: c.id,
               body: c.body,
@@ -161,9 +174,12 @@ export default async function ProjectPage({
           users={users}
           currentUser={user ? { id: user.id, name: user.name, avatarUrl: user.avatarUrl } : undefined}
           canDelete={can(user, "delete_issues")}
-          initialView={view === "discussion" || view === "activity" ? view : "detail"}
+          canEdit={editAccess?.canEdit ?? false}
+          editBlockedReason={editAccess?.reason}
+          initialTab={view === "activity" ? "activity" : "discussion"}
         />
       )}
     </div>
+    </ProjectIssueStatusesProvider>
   );
 }

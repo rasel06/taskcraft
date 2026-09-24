@@ -5,7 +5,13 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, requirePermission, canAccessProject } from "@/lib/auth";
+import {
+  getCurrentUser,
+  requirePermission,
+  canAccessProject,
+  canManageTeam,
+  getIssueEditAccess,
+} from "@/lib/auth";
 import {
   isAllowedAttachment,
   MAX_ATTACHMENT_SIZE,
@@ -14,7 +20,7 @@ import {
   type IssueAttachment,
 } from "@/lib/attachments";
 import { dispatchNotification, issueRecipients, appUrl } from "@/lib/notify";
-import { getIssueStatuses } from "@/lib/data";
+import { getIssueStatuses, getActivityReferenceNames } from "@/lib/data";
 import { formatIssueChanges, type FieldChange } from "@/lib/notify/format";
 import { issueCreatedMessage, issueUpdatedMessage } from "@/lib/notify/templates";
 
@@ -44,12 +50,12 @@ function attachmentNames(raw: string): string | null {
   return parseIssueAttachments(raw).map((a) => a.fileName).join(", ") || null;
 }
 
-// Resolve a requested status against the database-driven workflow. An empty
-// value falls back to the default status; unknown names are rejected.
-async function resolveIssueStatus(status: string | undefined) {
-  const statuses = await getIssueStatuses();
+// Resolve a requested status against the project's own workflow. An empty
+// value falls back to that project's default status; unknown names are rejected.
+async function resolveIssueStatus(projectId: string, status: string | undefined) {
+  const statuses = await getIssueStatuses(projectId);
   if (!status) return (statuses.find((s) => s.isDefault) ?? statuses[0]).name;
-  if (!statuses.some((s) => s.name === status)) throw new Error(`"${status}" is not a valid issue status`);
+  if (!statuses.some((s) => s.name === status)) throw new Error(`"${status}" is not a status in this project`);
   return status;
 }
 
@@ -85,11 +91,14 @@ export async function createIssue(input: CreateIssueInput) {
   if (!input.projectId) throw new Error("Project is required");
 
   const user = await getCurrentUser();
+  if (!user) throw new Error("Not signed in");
   const assigneeIds = Array.from(new Set(input.assigneeIds ?? []));
 
   const project = await prisma.project.findUnique({ where: { id: input.projectId } });
   if (!project) throw new Error("Project not found");
-  const status = await resolveIssueStatus(input.status);
+  // Any member of the project (or anyone who can see all projects) may create issues in it.
+  if (!(await canAccessProject(project.id, user))) throw new Error("You don't have access to this project");
+  const status = await resolveIssueStatus(input.projectId, input.status);
 
   const issue = await prisma.$transaction(async (tx) => {
     const team = await tx.team.update({
@@ -162,9 +171,21 @@ export async function updateIssue(
   }>,
 ) {
   const user = await getCurrentUser();
-  const before = await prisma.issue.findUnique({ where: { id: issueId }, include: { assignees: true } });
+  const before = await prisma.issue.findUnique({
+    where: { id: issueId },
+    include: { assignees: true, project: { select: { teamId: true } } },
+  });
   if (!before) throw new Error("Issue not found");
-  if (input.status !== undefined && input.status !== before.status) await resolveIssueStatus(input.status);
+
+  const access = await getIssueEditAccess(issueId, user);
+  if (!access.canEdit) {
+    // Cycle planning (moving issues in/out of a cycle) stays with whoever manages the team.
+    const cycleOnly = Object.keys(input).every((k) => k === "cycleId");
+    if (!(cycleOnly && (await canManageTeam(before.project.teamId, user)))) {
+      throw new Error(access.reason ?? "You can't edit this issue");
+    }
+  }
+  if (input.status !== undefined && input.status !== before.status) await resolveIssueStatus(before.projectId, input.status);
 
   const { labels, assigneeIds, attachments, ...rest } = input;
   const data: Record<string, unknown> = { ...rest };
@@ -252,4 +273,61 @@ export async function deleteIssue(issueId: string) {
   await requirePermission("delete_issues");
   await prisma.issue.delete({ where: { id: issueId } });
   revalidatePath("/", "layout");
+}
+
+export interface IssueTimeline {
+  issue: { id: string; title: string; createdAt: string; creatorName: string | null };
+  events: {
+    id: string;
+    field: string;
+    fromValue: string | null;
+    toValue: string | null;
+    createdAt: string;
+    user: { id: string; name: string; avatarUrl: string | null } | null;
+  }[];
+  // Names for ids referenced in event values (assignees, milestones, cycles).
+  names: Record<string, string>;
+}
+
+// Full audit trail of one issue, oldest first, for the card's Timeline dialog.
+export async function getIssueTimeline(issueId: string): Promise<IssueTimeline> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Not signed in");
+
+  const issue = await prisma.issue.findUnique({
+    where: { id: issueId },
+    select: {
+      id: true,
+      title: true,
+      createdAt: true,
+      projectId: true,
+      creator: { select: { name: true } },
+      activity: {
+        orderBy: { createdAt: "asc" },
+        include: { user: { select: { id: true, name: true, avatarUrl: true } } },
+      },
+    },
+  });
+  if (!issue) throw new Error("Issue not found");
+  if (!(await canAccessProject(issue.projectId, user))) throw new Error("You don't have access to this issue");
+
+  const names = await getActivityReferenceNames(issue.activity);
+
+  return {
+    issue: {
+      id: issue.id,
+      title: issue.title,
+      createdAt: issue.createdAt.toISOString(),
+      creatorName: issue.creator?.name ?? null,
+    },
+    events: issue.activity.map((a) => ({
+      id: a.id,
+      field: a.field,
+      fromValue: a.fromValue,
+      toValue: a.toValue,
+      createdAt: a.createdAt.toISOString(),
+      user: a.user,
+    })),
+    names,
+  };
 }

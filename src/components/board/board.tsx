@@ -17,6 +17,8 @@ import {
   Star,
   Trash2,
   GripVertical,
+  ChevronsDownUp,
+  ChevronsUpDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -33,12 +35,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { IssueCard } from "@/components/issue/issue-card";
+import { useCollapsedIssues } from "@/hooks/use-collapsed-issues";
 import { IssueRow } from "@/components/issue/issue-row";
 import { StatusIcon } from "@/components/shared/status-icon";
 import { PriorityIcon } from "@/components/shared/priority-icon";
 import { updateIssue } from "@/actions/issues";
 import { PRIORITIES } from "@/lib/constants";
-import { useIssueStatuses } from "@/components/shared/issue-statuses-context";
+import { useProjectIssueStatuses, useIssueStatusColumns } from "@/components/shared/issue-statuses-context";
 import {
   StatusFormDialog,
   DeleteStatusDialog,
@@ -62,7 +65,19 @@ function groupKeys(issue: IssueView, groupBy: GroupBy): string[] {
   return issue.assignees.length > 0 ? issue.assignees.map((a) => a.name) : ["Unassigned"];
 }
 
-export function Board({ issues, showProject = false }: { issues: IssueView[]; showProject?: boolean }) {
+// With `projectId` (a project's own board) the columns are that project's
+// workflow and can be managed by its admins. Without it (My Issues, team,
+// cycle and view boards) issues from several projects are shown, so the columns
+// are the merged status names of those projects and are read-only.
+export function Board({
+  issues,
+  showProject = false,
+  projectId,
+}: {
+  issues: IssueView[];
+  showProject?: boolean;
+  projectId?: string;
+}) {
   const router = useRouter();
   const [search, setSearch] = React.useState("");
   const [groupBy, setGroupBy] = React.useState<GroupBy>("status");
@@ -70,9 +85,12 @@ export function Board({ issues, showProject = false }: { issues: IssueView[]; sh
   const [layout, setLayout] = React.useState<Layout>("board");
   const [dragIssueId, setDragIssueId] = React.useState<string | null>(null);
   const [priorityFilter, setPriorityFilter] = React.useState<string[]>([]);
-  const { statuses: serverStatuses, canManage } = useIssueStatuses();
-  const { ordered: statuses, setOrder } = useOptimisticStatusOrder(serverStatuses);
-  const { reorder } = useStatusMutations("issue");
+  const { isCollapsed, toggle: toggleCollapsed, setMany: setCollapsed } = useCollapsedIssues();
+  const project = useProjectIssueStatuses(projectId);
+  const mergedColumns = useIssueStatusColumns(projectId ? [] : issues.map((i) => i.projectId));
+  const canManage = project.canManage;
+  const { ordered: statuses, setOrder } = useOptimisticStatusOrder(projectId ? project.statuses : mergedColumns);
+  const { reorder } = useStatusMutations("issue", projectId);
   // Column drag (reordering statuses) is separate from card drag (moving an issue).
   const [dragStatusId, setDragStatusId] = React.useState<string | null>(null);
   const [overStatusKey, setOverStatusKey] = React.useState<string | null>(null);
@@ -218,6 +236,23 @@ export function Board({ issues, showProject = false }: { issues: IssueView[]; sh
             <Rows3 className="h-3.5 w-3.5" />
           </button>
         </div>
+        {layout === "board" && filtered.length > 0 && (() => {
+          const ids = filtered.map((i) => i.id);
+          // Cards default to collapsed, so offer "Expand all" until every card is open.
+          const allExpanded = ids.every((id) => !isCollapsed(id));
+          return (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1.5 text-xs"
+              title={allExpanded ? "Collapse all cards" : "Expand all cards"}
+              onClick={() => setCollapsed(ids, allExpanded)}
+            >
+              {allExpanded ? <ChevronsDownUp className="h-3.5 w-3.5" /> : <ChevronsUpDown className="h-3.5 w-3.5" />}
+              {allExpanded ? "Collapse all" : "Expand all"}
+            </Button>
+          );
+        })()}
         <span className="text-xs text-faint-foreground">{filtered.length} issues</span>
       </div>
 
@@ -292,11 +327,11 @@ export function Board({ issues, showProject = false }: { issues: IssueView[]; sh
                 {draggableColumn && (
                   <GripVertical className="-ml-1 h-3.5 w-3.5 shrink-0 text-faint-foreground opacity-0 transition-opacity group-hover/col:opacity-100" />
                 )}
-                {groupBy === "status" && <StatusIcon status={key} />}
+                {groupBy === "status" && <StatusIcon status={key} projectId={projectId} />}
                 {key}
                 <span className="ml-auto text-faint-foreground">{list.length}</span>
                 {groupBy === "status" && canManage && (
-                  <StatusColumnMenu status={statuses.find((s) => s.name === key)} statuses={statuses} />
+                  <StatusColumnMenu projectId={projectId!} status={statusDef} statuses={statuses} />
                 )}
               </div>
               <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-2 pb-2">
@@ -306,7 +341,12 @@ export function Board({ issues, showProject = false }: { issues: IssueView[]; sh
                     draggable
                     onDragStart={() => setDragIssueId(issue.id)}
                   >
-                    <IssueCard issue={issue} showProject={showProject} />
+                    <IssueCard
+                      issue={issue}
+                      showProject={showProject}
+                      collapsed={isCollapsed(issue.id)}
+                      onToggleCollapse={() => toggleCollapsed(issue.id)}
+                    />
                   </div>
                 ))}
               </div>
@@ -316,6 +356,7 @@ export function Board({ issues, showProject = false }: { issues: IssueView[]; sh
           {groupBy === "status" && canManage && (
             <StatusFormDialog
               kind="issue"
+              projectId={projectId}
               trigger={
                 <button
                   type="button"
@@ -332,13 +373,21 @@ export function Board({ issues, showProject = false }: { issues: IssueView[]; sh
   );
 }
 
-// Column header menu for managing an issue status straight from the board.
-// Only rendered for users with the manage_issue_statuses permission; the
-// server actions check the permission again.
-function StatusColumnMenu({ status, statuses }: { status?: IssueStatusDef; statuses: IssueStatusDef[] }) {
+// Column header menu for managing a project's issue status from its board.
+// Only rendered for workspace admins (manage_issue_statuses) and the project's
+// lead / admin members; the server actions check this again.
+function StatusColumnMenu({
+  projectId,
+  status,
+  statuses,
+}: {
+  projectId: string;
+  status?: IssueStatusDef;
+  statuses: IssueStatusDef[];
+}) {
   const [editOpen, setEditOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
-  const { busy, move, makeDefault } = useStatusMutations("issue");
+  const { busy, move, makeDefault } = useStatusMutations("issue", projectId);
   // Issues can carry a status name that was removed from the workflow; nothing to manage then.
   if (!status) return null;
   const index = statuses.findIndex((s) => s.id === status.id);
@@ -376,8 +425,15 @@ function StatusColumnMenu({ status, statuses }: { status?: IssueStatusDef; statu
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <StatusFormDialog kind="issue" status={status} open={editOpen} onOpenChange={setEditOpen} />
-      <DeleteStatusDialog kind="issue" status={status} statuses={statuses} open={deleteOpen} onOpenChange={setDeleteOpen} />
+      <StatusFormDialog kind="issue" projectId={projectId} status={status} open={editOpen} onOpenChange={setEditOpen} />
+      <DeleteStatusDialog
+        kind="issue"
+        projectId={projectId}
+        status={status}
+        statuses={statuses}
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+      />
     </>
   );
 }

@@ -17,7 +17,9 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/70 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      // Translucent scrim: dims, softly blurs and desaturates the page so it
+      // stays as context but can't compete with the dialog (e.g. bright buttons).
+      "fixed inset-0 z-50 bg-zinc-950/45 backdrop-blur-[3px] backdrop-saturate-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className,
     )}
     {...props}
@@ -27,7 +29,7 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { size?: "default" | "lg" | "xl" }
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { size?: "default" | "lg" | "xl" | "2xl" }
 >(({ className, children, size = "default", ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
@@ -38,6 +40,7 @@ const DialogContent = React.forwardRef<
         size === "default" && "max-w-lg",
         size === "lg" && "max-w-2xl",
         size === "xl" && "max-w-4xl",
+        size === "2xl" && "max-w-6xl",
         className,
       )}
       {...props}

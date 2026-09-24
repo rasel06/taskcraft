@@ -3,14 +3,14 @@
 import * as React from "react";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { useIssueStatuses } from "@/components/shared/issue-statuses-context";
+import { useAllIssueStatusColumns } from "@/components/shared/issue-statuses-context";
 import type { ProjectStatusReportRow } from "@/lib/data";
 
 export function ReportsStatusTable({ projects }: { projects: ProjectStatusReportRow[] }) {
   const [search, setSearch] = React.useState("");
   const [teamFilter, setTeamFilter] = React.useState("all");
-  const { statuses } = useIssueStatuses();
-  const statusNames = statuses.map((s) => s.name);
+  // Projects have their own workflows; show one column per distinct status name.
+  const statusNames = useAllIssueStatusColumns().map((s) => s.name);
 
   const teamOptions = React.useMemo(() => {
     const map = new Map<string, string>();

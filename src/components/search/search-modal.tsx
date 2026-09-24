@@ -185,7 +185,7 @@ export function SearchModal({ teamIdentifiers, collapsed }: { teamIdentifiers: s
                     router.push(`/projects/${issue.projectId}?issue=${issue.id}`);
                   }}
                 >
-                  <StatusIcon status={issue.status} />
+                  <StatusIcon status={issue.status} projectId={issue.projectId} />
                   <span className="text-muted-foreground">{issue.id}</span>
                   <span className="truncate">{issue.title}</span>
                   <PriorityIcon priority={issue.priority} className="ml-auto" />

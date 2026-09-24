@@ -1,11 +1,12 @@
 "use client";
 
 import { ProjectStatusIcon } from "@/components/shared/project-status-icon";
-import { useIssueStatuses } from "@/components/shared/issue-statuses-context";
+import { useIssueStatusLookup } from "@/components/shared/issue-statuses-context";
 
-// Icon for an issue status name, styled from the database-driven workflow
-// (shape by category, color by the configured hex).
-export function StatusIcon({ status, className }: { status: string; className?: string }) {
-  const { statuses } = useIssueStatuses();
-  return <ProjectStatusIcon status={status} statuses={statuses} className={className} />;
+// Icon for an issue status name, styled from its project's workflow (shape by
+// category, color by the configured hex). Pass `projectId` when known.
+export function StatusIcon({ status, projectId, className }: { status: string; projectId?: string | null; className?: string }) {
+  const lookup = useIssueStatusLookup();
+  const def = lookup(status, projectId);
+  return <ProjectStatusIcon status={def ?? status} className={className} />;
 }

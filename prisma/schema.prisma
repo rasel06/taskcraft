@@ -149,6 +149,7 @@ model Project {
   milestones  Milestone[]
   issues      Issue[]
   members     ProjectMember[]
+  issueStatuses IssueStatus[]
 
   @@unique([teamId, name])
 }
@@ -168,17 +169,24 @@ model ProjectStatus {
   updatedAt DateTime @updatedAt
 }
 
-// Workspace-wide issue workflow (board columns), managed from the board's
-// column headers or Settings > Issues > Statuses. Issue.status stores the name.
+// Per-project issue workflow (board columns), managed from the project's
+// board column headers or Settings > Issues > Statuses. Issue.status stores
+// the name, which must exist in the issue's project workflow.
 model IssueStatus {
   id        String   @id @default(cuid())
-  name      String   @unique
+  projectId String
+  name      String
   color     String   @default("#71717a")
   category  String   @default("planned")
   position  Int      @default(0)
   isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, name])
+  @@index([projectId, position])
 }
 
 model ProjectMember {

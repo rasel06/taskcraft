@@ -15,6 +15,11 @@ export const PERMISSIONS = [
     description: "Edit team settings, privacy, and team membership",
   },
   {
+    key: "create_projects",
+    label: "Create projects",
+    description: "Create new projects (and project drafts) in any team the user can see",
+  },
+  {
     key: "manage_project_statuses",
     label: "Manage project statuses",
     description: "Create, edit, reorder, and delete the project status lifecycle",
@@ -22,7 +27,7 @@ export const PERMISSIONS = [
   {
     key: "manage_issue_statuses",
     label: "Manage issue statuses",
-    description: "Create, edit, reorder, and delete issue workflow statuses (board columns)",
+    description: "Manage the issue workflow (board columns) of every project; project leads/admins can always manage their own project",
   },
   {
     key: "delete_issues",

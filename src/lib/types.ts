@@ -45,7 +45,7 @@ export interface ProjectOverview {
   startDate: string | null;
   targetDate: string | null;
   issueCount: number;
-  team: { id: string; name: string; identifier: string };
+  team: { id: string; name: string; identifier: string; color: string; icon: string };
   lead: { id: string; name: string; avatarUrl: string | null };
 }
 

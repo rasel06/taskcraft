@@ -24,7 +24,7 @@ import { UserAvatar } from "@/components/shared/user-avatar";
 import { createIssue } from "@/actions/issues";
 import { AttachmentGrid, AttachmentPickerButton, uploadStagedFiles, useStagedFiles } from "@/components/issue/issue-attachments";
 import { PRIORITIES } from "@/lib/constants";
-import { useIssueStatuses, defaultIssueStatusName } from "@/components/shared/issue-statuses-context";
+import { useProjectIssueStatuses, defaultIssueStatusName } from "@/components/shared/issue-statuses-context";
 import type { ProjectLite, UserLite } from "@/lib/types";
 
 export function CreateIssueDialog({
@@ -44,11 +44,14 @@ export function CreateIssueDialog({
 
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
-  const { statuses } = useIssueStatuses();
-  const [status, setStatus] = React.useState<string>(() => defaultIssueStatusName(statuses));
+  const [status, setStatus] = React.useState<string>("");
   const [priority, setPriority] = React.useState<string>(PRIORITIES[0]);
   const [assigneeIds, setAssigneeIds] = React.useState<string[]>([]);
   const [projectId, setProjectId] = React.useState<string>(defaultProjectId ?? "");
+  const { statuses } = useProjectIssueStatuses(projectId);
+  // Fall back to the project's default whenever the chosen status isn't in its
+  // workflow (nothing picked yet, or the project was switched).
+  const effectiveStatus = statuses.some((s) => s.name === status) ? status : defaultIssueStatusName(statuses);
   const [labelInput, setLabelInput] = React.useState("");
   const [labels, setLabels] = React.useState<string[]>([]);
   const { staged: stagedFiles, add: addFiles, remove: removeFile, clear: clearFiles } = useStagedFiles();
@@ -64,7 +67,7 @@ export function CreateIssueDialog({
 
   function resetAll() {
     resetFields();
-    setStatus(defaultIssueStatusName(statuses));
+    setStatus("");
     setPriority(PRIORITIES[0]);
     setAssigneeIds([]);
     setLabels([]);
@@ -96,7 +99,7 @@ export function CreateIssueDialog({
       const issue = await createIssue({
         title,
         description,
-        status,
+        status: effectiveStatus,
         priority,
         assigneeIds,
         projectId,
@@ -175,14 +178,14 @@ export function CreateIssueDialog({
             <section className="flex flex-col gap-2 border-t border-border pt-4">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Properties</h3>
               <div className="flex flex-wrap items-center gap-2">
-                <Select value={status} onValueChange={setStatus}>
+                <Select value={effectiveStatus} onValueChange={setStatus} disabled={!projectId}>
                   <SelectTrigger className="h-8 w-auto gap-1.5 rounded-md border border-border bg-muted/30 text-xs">
-                    <StatusIcon status={status} />
+                    <StatusIcon status={effectiveStatus} projectId={projectId} />
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {statuses.map((s) => (
-                      <SelectItem key={s.id} value={s.name} icon={<StatusIcon status={s.name} />}>
+                      <SelectItem key={s.id} value={s.name} icon={<StatusIcon status={s.name} projectId={projectId} />}>
                         {s.name}
                       </SelectItem>
                     ))}

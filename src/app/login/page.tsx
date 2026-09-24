@@ -1,5 +1,6 @@
 import { CheckCircle2 } from "lucide-react";
 import { LoginForm } from "@/components/auth/login-form";
+import { loginErrorMessage } from "@/lib/login-errors";
 
 const HIGHLIGHTS = [
   "Plan sprints and roadmaps in one shared workspace",
@@ -7,7 +8,10 @@ const HIGHLIGHTS = [
   "Discuss, review, and ship without leaving the app",
 ];
 
-export default function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  // Set when the form was submitted without JavaScript and the login failed.
+  const { error } = await searchParams;
+
   return (
     <div className="flex min-h-screen w-full">
       <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 px-12 py-12 text-white lg:flex">
@@ -56,7 +60,7 @@ export default function LoginPage() {
             <h1 className="text-xl font-semibold text-foreground">Welcome back</h1>
             <p className="text-sm text-muted-foreground">Sign in to your workspace to continue</p>
           </div>
-          <LoginForm />
+          <LoginForm initialError={loginErrorMessage(error)} />
         </div>
       </div>
     </div>
